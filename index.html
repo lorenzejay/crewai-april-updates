@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>CrewAI April 2026 — Five features that changed how we build</title>
+<title>CrewAI April 2026 — CrewAI OSS update</title>
 
 <!-- ================================================================
      FONTS
@@ -308,11 +308,25 @@ body {
 /* ================================================================
    OVERVIEW GRID (slide 02)
    ================================================================ */
-.slide-overview .slide-content { justify-content: space-between; gap: var(--content-gap); }
+/* Overview slide: top-bar pinned to top, headline + cards centered in the
+   remaining space so the slide reads as one balanced composition instead
+   of a top-heavy title + bottom-heavy row. */
+.slide-overview .slide-content {
+  justify-content: flex-start;
+  gap: clamp(1.5rem, 3.5vw, 3rem);
+}
+.slide-overview .overview-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: clamp(1.5rem, 3vw, 2.5rem);
+  min-height: 0;
+}
 .slide-overview h2 {
   font-family: var(--font-display);
   font-weight: 600;
-  font-size: var(--title-size);
+  font-size: clamp(1.5rem, 3.6vw, 3rem);
   line-height: 1.05;
   letter-spacing: -0.02em;
   max-width: 22ch;
@@ -321,18 +335,18 @@ body {
 .cards-row {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: clamp(0.6rem, 1.2vw, 1.1rem);
-  margin-top: clamp(0.75rem, 1.5vw, 1.5rem);
+  gap: clamp(0.75rem, 1.4vw, 1.3rem);
 }
 .feature-card {
   background: var(--bg-card);
   border: 1px solid var(--rule);
-  border-radius: 10px;
-  padding: clamp(0.85rem, 1.6vw, 1.3rem);
+  border-radius: 12px;
+  padding: clamp(1.15rem, 1.9vw, 1.6rem);
   display: flex; flex-direction: column;
-  gap: clamp(0.4rem, 0.8vw, 0.6rem);
+  gap: clamp(0.55rem, 1vw, 0.85rem);
   position: relative;
   transition: all 0.35s var(--ease-out-expo);
+  min-height: clamp(10rem, 22vh, 16rem);
 }
 .feature-card:hover {
   transform: translateY(-4px);
@@ -342,27 +356,31 @@ body {
 .feature-card .num {
   font-family: var(--font-mono);
   font-weight: 700;
-  font-size: var(--h3-size);
+  font-size: clamp(1rem, 1.5vw, 1.4rem);
   color: var(--coral);
   line-height: 1;
+  margin-bottom: clamp(0.2rem, 0.5vw, 0.4rem);
 }
 .feature-card .name {
   font-family: var(--font-display);
   font-weight: 600;
-  font-size: clamp(0.95rem, 1.4vw, 1.25rem);
+  font-size: clamp(1.05rem, 1.55vw, 1.4rem);
   line-height: 1.15;
   color: var(--ink);
+  letter-spacing: -0.01em;
 }
 .feature-card .blurb {
-  font-size: var(--small-size);
-  line-height: 1.45;
+  font-size: clamp(0.82rem, 1.05vw, 0.98rem);
+  line-height: 1.5;
   color: var(--ink-soft);
 }
 .feature-card .release {
   margin-top: auto;
+  padding-top: clamp(0.5rem, 1vw, 0.8rem);
+  border-top: 1px dashed var(--rule);
   font-family: var(--font-mono);
-  font-size: clamp(0.6rem, 0.75vw, 0.72rem);
-  letter-spacing: 0.12em;
+  font-size: clamp(0.65rem, 0.82vw, 0.78rem);
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--ink-faint);
 }
@@ -1021,11 +1039,10 @@ body.editing [data-editable]:focus { outline: 1px solid var(--coral); background
     <div class="hero">
       <div class="eyebrow reveal d-2" data-editable>CrewAI · April 2026</div>
       <h1 class="reveal d-3" data-editable>
-        Five features that changed how we <span class="accent">build</span>.
+        CrewAI <span class="accent">OSS</span> update.
       </h1>
       <p class="lede reveal d-4" data-editable>
-        A tour through the updates that landed this spring — from AI-native docs to
-        resumable runs. One idea at a time.
+        A tour through the updates that landed this spring.
       </p>
     </div>
     <div class="modules-rail reveal-fade d-5">
@@ -1048,8 +1065,9 @@ body.editing [data-editable]:focus { outline: 1px solid var(--coral); background
       <span class="tag">The tour</span>
       <span class="slide-counter">02 / 12</span>
     </div>
+    <div class="overview-body">
     <h2 class="reveal d-2" data-editable>
-      Five features.<br />
+      Latest features.<br />
     </h2>
     <div class="cards-row">
       <div class="feature-card reveal d-2" data-editable>
@@ -1083,6 +1101,7 @@ body.editing [data-editable]:focus { outline: 1px solid var(--coral); background
         <div class="release">v1.14.0–1.14.3</div>
       </div>
     </div>
+    </div><!-- /.overview-body -->
   </div>
   <img class="logo reveal-fade d-6" src="crew_only_logo.png" alt="crewai" />
 </section>
