@@ -1,6 +1,6 @@
 # CrewAI April 2026 Feature Showcase
 
-A follow-along tour of six notable CrewAI features shipped through April 2026. Every runtime use case is built on top of a `Flow`.
+A follow-along tour of five notable CrewAI features shipped through April 2026. Every runtime use case is built on top of a `Flow`.
 
 ## Modules
 
@@ -11,7 +11,6 @@ A follow-along tour of six notable CrewAI features shipped through April 2026. E
 | 02 | Plan-and-Execute | Planner → StepExecutor → Observer executor | v1.14.0 | [`02_plan_and_execute.ipynb`](notebooks/02_plan_and_execute.ipynb) | `planning_flow.py` |
 | 03 | Unified Memory | Single `Memory` API with scope isolation | PR #4420 | [`03_unified_memory.ipynb`](notebooks/03_unified_memory.ipynb) | `memory_flow.py` |
 | 04 | Checkpointing | `CheckpointConfig` + resume + fork | v1.14.0–1.14.3 | [`04_checkpointing.ipynb`](notebooks/04_checkpointing.ipynb) | `checkpoint_flow.py` |
-| 05 | A2A Protocol | Agent-to-agent server + client | v1.8–v1.13 | [`05_a2a.ipynb`](notebooks/05_a2a.ipynb) | `a2a_flow.py` |
 
 Start with [Module 00](notebooks/00_build_with_ai.ipynb) — it sets up your coding agent for the rest of the tour.
 
@@ -57,7 +56,6 @@ python -m showcase.flows.skills_flow
 python -m showcase.flows.planning_flow
 python -m showcase.flows.memory_flow
 python -m showcase.flows.checkpoint_flow
-python -m showcase.flows.a2a_flow
 ```
 
 ## Repo layout
@@ -71,7 +69,7 @@ python -m showcase.flows.a2a_flow
 │   └── flows/            # One Flow per feature
 ├── .checkpoints/         # Created at runtime by Module 04
 ├── .env.example
-└── pyproject.toml        # crewai[tools,a2a,qdrant,anthropic] + jupyter
+└── pyproject.toml        # crewai[tools,qdrant,anthropic] + jupyter
 ```
 
 ## Cost note

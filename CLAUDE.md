@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Follow-along showcase of six CrewAI features (through April 2026): Build with AI, Agent Skills, Plan-and-Execute, Unified Memory, Checkpointing, and A2A. Each runtime demo lives in a module-numbered notebook plus a paired Flow under `src/showcase/flows/`.
+Follow-along showcase of five CrewAI features (through April 2026): Build with AI, Agent Skills, Plan-and-Execute, Unified Memory, and Checkpointing. Each runtime demo lives in a module-numbered notebook plus a paired Flow under `src/showcase/flows/`.
 
 ## Commands
 
@@ -23,7 +23,6 @@ python -m showcase.flows.skills_flow
 python -m showcase.flows.planning_flow
 python -m showcase.flows.memory_flow
 python -m showcase.flows.checkpoint_flow
-python -m showcase.flows.a2a_flow
 ```
 
 Notebooks: `jupyter notebook notebooks/0X_*.ipynb`.
@@ -48,8 +47,7 @@ Per-module specifics that aren't obvious from reading one file:
 - **`skills_flow.py`** — resolves `SKILLS_DIR` with `parents[3]` from the file location (`src/showcase/flows/…` → repo root). `skills/*/SKILL.md` files are the fixtures; agents load them via the `skills=[...]` kwarg.
 - **`planning_flow.py`** — uses `PlanningConfig(reasoning_effort=..., max_attempts=..., max_steps=...)` on the Agent, not a separate planner agent. The executor handles plan → step → observe → replan internally.
 - **`memory_flow.py`** — constructs a `Memory` instance lazily and assigns via `object.__setattr__(self, "memory", ...)` because `Flow` attributes are frozen. Scope isolation uses `memory.scope(f"/{user_id}")`; callers write and recall through the scoped handle.
-- **`checkpoint_flow.py`** — writes to `.checkpoints/showcase.db` (sqlite) at repo root, resolved via `parents[3]`. `run_fresh()` starts a new run; `resume_from(path)` restarts using `CheckpointConfig(restore_from=...)`. `.checkpoints/` is git-ignored and created at runtime.
-- **`a2a_flow.py`** — ships both sides in one file: `build_server_agent()` for the server, `A2AClientFlow` for the client. Client uses `fail_fast=False` so the notebook still runs when no server is up; default endpoint comes from `A2A_SHOWCASE_ENDPOINT` (default `http://localhost:8765/.well-known/agent-card.json`). Keep the graceful-fallback behavior — the notebook relies on it.
+- **`checkpoint_flow.py`** — writes to `.checkpoints.db` (sqlite) at repo root, resolved via `parents[3]`. `run_fresh()` starts a new run; `resume_from(path)` restarts using `CheckpointConfig(restore_from=...)`. `fork_from(path, branch=..., **overrides)` diverges onto a new branch with optional input overrides. Agent-level demo via `run_fresh_agent()` / `resume_agent()`. `.checkpoints.db` is git-ignored (via `*.db`) and created at runtime.
 
 ## Conventions
 
