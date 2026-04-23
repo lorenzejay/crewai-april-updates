@@ -503,24 +503,45 @@ body {
   margin-top: 0.2em;
 }
 
-/* Pattern cards (Memory isolation) */
-.pattern-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(0.5rem, 1vw, 0.9rem); }
-.pattern-card {
-  background: var(--bg-card);
-  border: 1px solid var(--rule);
-  border-radius: 8px;
-  padding: clamp(0.75rem, 1.4vw, 1.1rem);
-  display: flex; flex-direction: column;
-  gap: 0.4em;
+/* Cognitive-memory step list — five operations as compact single-line rows. */
+.cognition-steps {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.4rem, 0.9vw, 0.75rem);
+  margin-top: clamp(0.25rem, 0.5vw, 0.5rem);
 }
-.pattern-card .name {
+.cognition-steps li {
+  display: flex;
+  align-items: baseline;
+  gap: clamp(0.5rem, 1.1vw, 0.95rem);
+  font-size: var(--body-size);
+  line-height: 1.45;
+}
+.cognition-steps .step-num {
   font-family: var(--font-mono);
-  font-size: clamp(0.75rem, 1vw, 0.9rem);
   font-weight: 700;
+  font-size: clamp(0.68rem, 0.8vw, 0.78rem);
+  letter-spacing: 0.12em;
   color: var(--coral);
+  min-width: 2em;
+  flex-shrink: 0;
+  padding-top: 0.1em;
 }
-.pattern-card .desc { font-size: var(--small-size); color: var(--ink-soft); line-height: 1.45; }
-@media (max-width: 900px) { .pattern-cards { grid-template-columns: 1fr; } }
+.cognition-steps .step-name {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(0.95rem, 1.3vw, 1.15rem);
+  color: var(--ink);
+  min-width: 6.5em;
+  flex-shrink: 0;
+  letter-spacing: -0.01em;
+}
+.cognition-steps .step-desc { color: var(--ink-soft); }
+@media (max-width: 700px) {
+  .cognition-steps li { flex-wrap: wrap; }
+  .cognition-steps .step-name { min-width: 0; }
+}
 
 /* ================================================================
    CODE SLIDE (install / demo / resume-fork)
@@ -638,12 +659,113 @@ body {
   gap: clamp(0.5rem, 1vw, 0.85rem);
 }
 .compare-card.accent { border-color: rgba(255, 107, 90, 0.4); }
+.compare-card.muted {
+  border-color: var(--rule);
+  background: rgba(255, 255, 255, 0.015);
+}
 .compare-card .label {
   font-family: var(--font-mono);
   font-size: clamp(0.7rem, 0.9vw, 0.85rem);
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--coral);
+}
+.compare-card.muted .label { color: var(--ink-faint); }
+.compare-card.muted .headline { color: var(--ink-soft); }
+
+/* Memory-as-Storage — linear pipeline of boxed steps with ↓ arrows. */
+.storage-pipeline {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  margin-top: clamp(0.4rem, 0.8vw, 0.6rem);
+  flex: 1;
+  justify-content: center;
+}
+.storage-pipeline li {
+  font-family: var(--font-mono);
+  font-size: clamp(0.75rem, 0.95vw, 0.9rem);
+  color: var(--ink-soft);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--rule);
+  border-radius: 5px;
+  padding: clamp(0.4rem, 0.75vw, 0.55rem) clamp(0.65rem, 1vw, 0.85rem);
+  text-align: center;
+  letter-spacing: 0.04em;
+  margin-bottom: clamp(0.9rem, 1.5vw, 1.3rem);
+  position: relative;
+}
+.storage-pipeline li:last-child { margin-bottom: 0; }
+.storage-pipeline li:not(:last-child)::after {
+  content: "↓";
+  position: absolute;
+  left: 50%;
+  /* Sit in the gap below the box — negate the margin to hit the midpoint. */
+  bottom: calc(-1 * clamp(0.9rem, 1.5vw, 1.3rem) + 0.15em);
+  transform: translateX(-50%);
+  color: var(--ink-faint);
+  font-size: 0.9em;
+  line-height: 1;
+}
+
+/* Memory-as-Cognition — 5 operations with side labels. Each op is coral +
+   display-font, the label next to it is ink-soft. */
+.cognition-pipeline {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.4rem, 0.85vw, 0.7rem);
+  margin-top: clamp(0.4rem, 0.8vw, 0.6rem);
+  flex: 1;
+  justify-content: center;
+}
+.cognition-pipeline li {
+  display: flex;
+  align-items: baseline;
+  gap: clamp(0.6rem, 1.1vw, 1rem);
+  padding-bottom: clamp(0.35rem, 0.7vw, 0.55rem);
+  border-bottom: 1px dashed var(--rule);
+  font-size: clamp(0.78rem, 1vw, 0.92rem);
+  line-height: 1.4;
+}
+.cognition-pipeline li:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+.cognition-pipeline .op {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(0.95rem, 1.25vw, 1.15rem);
+  color: var(--coral);
+  letter-spacing: -0.01em;
+  min-width: 6em;
+  flex-shrink: 0;
+}
+.cognition-pipeline .did { color: var(--ink-soft); }
+
+/* Pull quote on slide 08 — keeps the thesis landing. */
+.pull-quote {
+  border-left: 3px solid var(--coral);
+  padding: clamp(0.6rem, 1vw, 0.9rem) clamp(0.85rem, 1.4vw, 1.2rem);
+  background: rgba(255, 107, 90, 0.05);
+  border-radius: 0 6px 6px 0;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(1.05rem, 1.6vw, 1.45rem);
+  line-height: 1.35;
+  color: var(--ink);
+  font-style: italic;
+  margin-top: clamp(0.4rem, 0.8vw, 0.7rem);
+}
+.pull-quote cite {
+  display: block;
+  margin-top: 0.6em;
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: var(--small-size);
+  font-style: normal;
+  letter-spacing: 0.05em;
+  color: var(--ink-soft);
 }
 .compare-card .headline {
   font-family: var(--font-display);
@@ -1004,32 +1126,25 @@ crewai deploy
       <div class="module-ident">
         <div class="module-number reveal-scale d-1">04</div>
         <div class="code-chip reveal d-2" data-editable>
+          memory.<span class="fn">remember</span>(content, ...)
+        </div>
+        <div class="code-chip reveal d-2" data-editable>
           memory.<span class="fn">recall</span>(query, <span class="kw">depth</span>=<span class="str">"deep"</span>)
         </div>
         <div class="module-label reveal d-3">Unified Memory · PR #4420</div>
       </div>
       <div class="module-body">
         <h2 class="reveal d-2" data-editable>
-          Short + Long + Entity, <span class="accent">collapsed into one API</span>.
+          Memory isn't storage. <span class="accent">It's cognition.</span>
         </h2>
         <p class="reveal d-3" style="font-size: var(--body-size); color: var(--ink-soft); line-height: 1.55;" data-editable>
-          Every write produces a <code>MemoryRecord</code> with content, scope, categories, importance, and embedding.
-          Recall ranks with a weighted composite of semantic similarity, recency decay, and importance.
+          Most systems treat memory as a vector store plus retrieval — text in, text out.
+          Here, memory <strong>reasons</strong> about what to keep, when to merge, and when to let go.
         </p>
-        <div class="pattern-cards">
-          <div class="pattern-card reveal d-4" data-editable>
-            <div class="name">memory.scope(path)</div>
-            <div class="desc">Bind to a sub-tree. Reads and writes are confined beneath that prefix.</div>
-          </div>
-          <div class="pattern-card reveal d-5" data-editable>
-            <div class="name">memory.slice([…])</div>
-            <div class="desc">Read-only union of scopes. Great for cross-tenant analytics.</div>
-          </div>
-          <div class="pattern-card reveal d-6" data-editable>
-            <div class="name">root_scope=</div>
-            <div class="desc">Construction-time prefix. Tenant isolation by construction.</div>
-          </div>
-        </div>
+        <blockquote class="pull-quote reveal d-4" data-editable>
+          &ldquo;Memory itself resembles an Agentic System.&rdquo;
+          <cite>— CrewAI engineering blog</cite>
+        </blockquote>
       </div>
     </div>
   </div>
@@ -1037,7 +1152,8 @@ crewai deploy
 </section>
 
 <!-- ================================================================
-     SLIDE 09 — MEMORY · SHALLOW vs DEEP
+     SLIDE 09 — MEMORY · STORAGE vs COGNITION
+     Side-by-side contrast — the webinar segue into the Module 03 notebook.
      ================================================================ -->
 <section class="slide slide-compare">
   <div class="slide-content">
@@ -1047,39 +1163,41 @@ crewai deploy
     </div>
     <div>
       <h2 class="reveal d-2" data-editable>
-        Two recall paths, <span class="accent">same signature</span>.
+        Two ways to treat memory. <span class="accent">One is thinking.</span>
       </h2>
       <p class="subhead reveal d-3" data-editable>
-        <code>memory.recall(query, depth=…)</code> — pick the cost profile that fits your path.
+        Traditional RAG dumps text into a vector store and stuffs the top-k into context.
+        Cognitive memory reasons about what to keep, when to merge, and when to let go.
       </p>
     </div>
     <div class="compare-grid">
-      <div class="compare-card reveal d-4" data-editable>
-        <div class="label">depth=&quot;shallow&quot;</div>
-        <div class="headline">Hot-path retrieval.</div>
+      <div class="compare-card muted reveal d-4" data-editable>
+        <div class="label">Memory as Storage</div>
+        <div class="headline">Linear. Mechanical.</div>
+        <ol class="storage-pipeline">
+          <li>Data in</li>
+          <li>Embed</li>
+          <li>Store</li>
+          <li>Retrieve</li>
+          <li>Stuff into context</li>
+        </ol>
         <div class="body">
-          One embed, one vector search. Returns <code>MemoryMatch</code>es scored by the composite formula.
-          Deterministic, no LLM.
+          Can't tell what matters from what doesn't. Can't update itself. Ages badly.
         </div>
-        <ul class="steps">
-          <li>embed query</li>
-          <li>single backend search</li>
-          <li>composite rank</li>
-        </ul>
       </div>
       <div class="compare-card accent reveal d-5" data-editable>
-        <div class="label">depth=&quot;deep&quot; (default)</div>
-        <div class="headline">LLM-in-the-loop retriever.</div>
-        <div class="body">
-          Analyzes the query, generates sub-queries, searches scopes in parallel, routes on confidence,
-          optionally explores deeper to fill evidence gaps.
-        </div>
-        <ul class="steps">
-          <li>analyze → sub-queries</li>
-          <li>parallel scope search</li>
-          <li>confidence router</li>
-          <li>explore_deeper loop</li>
+        <div class="label">Memory as Cognition</div>
+        <div class="headline">Cyclical. Self-aware.</div>
+        <ul class="cognition-pipeline">
+          <li><span class="op">Encode</span><span class="did">analyzes, places, scores</span></li>
+          <li><span class="op">Consolidate</span><span class="did">detects + resolves conflicts</span></li>
+          <li><span class="op">Recall</span><span class="did">evaluates its own confidence</span></li>
+          <li><span class="op">Extract</span><span class="did">atomizes long text into facts</span></li>
+          <li><span class="op">Forget</span><span class="did">prunes intentionally</span></li>
         </ul>
+        <div class="body">
+          Every op is a Flow. The system reasons about what to keep.
+        </div>
       </div>
     </div>
   </div>
