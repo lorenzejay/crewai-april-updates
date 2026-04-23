@@ -1,292 +1,218 @@
-"""Module 04 demo: checkpointing on a Crew, with a clean resume vs fork split.
+"""Minimal Crew checkpointing example aligned with the CrewAI docs.
 
-Two complementary demos, sharing one SQLite DB at the repo-root default path.
+See: https://docs.crewai.com/en/concepts/checkpointing
 
-Crew demo — a 2-agent launch-copy pipeline:
-    Strategist (positioning)  →  Copywriter (tagline + value props)
-
-Each task completion writes a checkpoint. From any of those checkpoints you can:
-
-    RESUME  — continue the same branch with the original inputs. Completed
-              tasks stay; remaining tasks run normally. Same lineage.
-
-    FORK    — restore the same state but assign a NEW branch label and
-              optionally override inputs. Later tasks re-render with new
-              values. Parent_id still points at the source — a true branch.
-
-Helpers: ``run_fresh()``, ``resume_from()``, ``fork_from()``.
-
-Agent demo — standalone ``Agent.kickoff()`` with context-threaded resume.
-Unchanged from the prior iteration. Helpers: ``run_fresh_agent()``,
-``resume_agent()``.
+Three tasks: **research** → **tune for {audience}** → **improve tone** (one checkpoint
+per completed task). Helpers: ``run_fresh``, ``resume_from``, ``fork_from`` (refuses
+terminal all-done snapshots unless ``allow_completed=True``). See
+``CHECKPOINT_ROOT``, ``list_crew_checkpoint_files`` for demos.
 """
 
 from __future__ import annotations
 
-import asyncio
+import json
 from pathlib import Path
 
 from crewai import Agent, Crew, Task
-from crewai.lite_agent_output import LiteAgentOutput
 from crewai.state.checkpoint_config import CheckpointConfig
-from crewai.state.provider.sqlite_provider import SqliteProvider
 
 from showcase.shared import get_llm
 
-CHECKPOINT_DB = str(Path(__file__).resolve().parents[3] / ".checkpoints.db")
+# JSON checkpoints in repo-root ``.checkpoints/`` (default JsonProvider layout).
+_CHECKPOINT_DIR = Path(__file__).resolve().parents[3] / ".checkpoints"
+# Exposed for notebooks / CLI: ``crewai checkpoint --location <this> list``
+CHECKPOINT_ROOT = str(_CHECKPOINT_DIR)
 
-DEFAULT_IDEA = (
-    "A CLI that generates deterministic database migration plans from a Git diff."
-)
-DEFAULT_TONE = "confident, specific, no hype"
-
-# Agent-demo defaults (unchanged)
-DEFAULT_AGENT_PROMPT = (
-    "In 80 words, explain why WAL-mode SQLite is a good fit for a per-process "
-    "checkpoint store. Focus on concurrency and crash safety."
-)
-DEFAULT_AGENT_FOLLOWUP = (
-    "Now name TWO specific failure modes to watch for in that design. "
-    "One sentence each."
-)
+DEFAULT_TOPIC = "The 2026 state of open-source AI coding agents."
+DEFAULT_AUDIENCE = "senior engineers evaluating CrewAI for a production system"
 
 
-# ===================================================================
-# Crew demo: build + checkpoint + resume + fork
-# ===================================================================
+def _crew_completed_vs_total_json(restore_from: str) -> tuple[int, int] | None:
+    """If ``restore_from`` points at a crew JSON snapshot, return ``(done, total)`` tasks."""
+    if "#" in restore_from:
+        return None
+    path = Path(restore_from)
+    if not path.is_file():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return None
+    for entity in data.get("entities", []):
+        if entity.get("entity_type") != "crew":
+            continue
+        tasks = entity.get("tasks") or []
+        if not tasks:
+            return None
+        done = sum(1 for t in tasks if t.get("output") is not None)
+        return done, len(tasks)
+    return None
 
 
-def _checkpoint_config(restore_from: str | None = None) -> CheckpointConfig:
-    """Checkpoint after every task completion. Keeps 20 rows per branch."""
+def list_crew_checkpoint_files(*, branch: str = "main", limit: int = 20) -> list[Path]:
+    """Newest-first JSON paths under ``.checkpoints/<branch>/`` (handy after ``run_fresh``)."""
+    root = _CHECKPOINT_DIR / branch
+    if not root.is_dir():
+        return []
+    files = sorted(root.glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
+    return files[:limit]
+
+
+def forkable_crew_checkpoint_paths(*, branch: str = "main", limit: int = 30) -> list[Path]:
+    """Like ``list_crew_checkpoint_files`` but only snapshots where a crew task is still pending."""
+    out: list[Path] = []
+    for path in list_crew_checkpoint_files(branch=branch, limit=limit):
+        stats = _crew_completed_vs_total_json(str(path))
+        if stats is None:
+            continue
+        done, total = stats
+        if done < total:
+            out.append(path)
+    return out
+
+
+def checkpoint_config(*, restore_from: str | None = None) -> CheckpointConfig:
+    """Docs defaults: JsonProvider, ``task_completed``, optional ``restore_from``."""
     return CheckpointConfig(
-        location=CHECKPOINT_DB,
-        provider=SqliteProvider(),
+        location=str(_CHECKPOINT_DIR),
         on_events=["task_completed"],
-        max_checkpoints=20,
+        max_checkpoints=10,
         restore_from=restore_from,
     )
 
 
-def _build_crew() -> Crew:
-    """Build a fresh 2-agent launch-copy Crew. Inputs: {idea}, {tone}."""
+def build_crew() -> Crew:
+    """Research → audience tune → tone polish. ``checkpoint=…`` saves after each task."""
+    researcher = Agent(
+        role="Research Analyst",
+        goal="Surface the most load-bearing facts about {topic}",
+        backstory="Concrete, verifiable facts only — no marketing tone.",
+        llm=get_llm(),
+    )
     strategist = Agent(
-        role="Positioning Strategist",
-        goal="Name the single sharpest positioning for {idea}",
+        role="Audience Strategist",
+        goal="Shape content so it lands for {audience}",
         backstory=(
-            "Seasoned PMM who cuts through fluff. Writes positioning that "
-            "names the target reader, their pain, and one clear differentiator."
+            "Chooses depth, jargon level, framing, and examples for the reader. "
+            "Does not invent facts beyond the supplied research."
         ),
         llm=get_llm(),
     )
-    copywriter = Agent(
-        role="Launch Copywriter",
-        goal="Turn positioning into launch copy that lands",
-        backstory="Writes taglines that survive a CEO's first read.",
+    editor = Agent(
+        role="Line Editor",
+        goal="Improve readability and tone without changing substance",
+        backstory=(
+            "Tightens sentences, improves flow, and warms or sharpens voice as fits "
+            "the draft. Never adds claims or alters who the piece is written for."
+        ),
         llm=get_llm(),
     )
 
-    positioning = Task(
+    research = Task(
         description=(
-            "Produce a one-paragraph positioning statement for {idea}.\n"
-            "Name the target reader, the pain, and the single differentiator.\n"
-            "Tone: {tone}."
+            "Topic: {topic}\n\n"
+            "List 4–5 one-sentence facts. Each must be concrete and checkable."
         ),
-        expected_output="One paragraph, 3–4 sentences max.",
+        expected_output="Markdown bullet list.",
+        agent=researcher,
+    )
+    tuned_for_audience = Task(
+        description=(
+            "Topic: {topic}\n"
+            "Audience: {audience}\n\n"
+            "Using ONLY the research above, produce a short markdown draft aimed at "
+            "this audience.\n\n"
+            "Focus on *fit*: vocabulary, assumptions, what to emphasize, one example "
+            "idea they'd care about. Do not worry about literary polish yet — clear "
+            "and direct is fine."
+        ),
+        expected_output="Markdown draft (rough tone OK).",
         agent=strategist,
+        context=[research],
     )
-    write_copy = Task(
+    improve_tone = Task(
         description=(
-            "Turn the positioning above into launch copy for {idea}. "
-            "Tone: {tone}.\n"
-            "Respond in Markdown with exactly two sections:\n"
-            "  ## Tagline — one line, under 12 words.\n"
-            "  ## Value props — three bullets, each under 12 words."
+            "Revise the audience-tuned draft below.\n\n"
+            "Goals: smoother sentences, clearer rhythm, consistent voice. You may "
+            "reorder sentences for impact.\n\n"
+            "Hard rules: do not add new facts, statistics, or sources; do not change "
+            "the target audience or the core message; keep length roughly similar."
         ),
-        expected_output="Markdown with '## Tagline' and '## Value props' sections.",
-        agent=copywriter,
-        context=[positioning],
+        expected_output="Polished markdown — same substance and audience as the draft.",
+        agent=editor,
+        context=[tuned_for_audience],
     )
 
-    return Crew(agents=[strategist, copywriter], tasks=[positioning, write_copy])
+    return Crew(
+        agents=[researcher, strategist, editor],
+        tasks=[research, tuned_for_audience, improve_tone],
+        verbose=True,
+        checkpoint=checkpoint_config(),
+    )
 
 
-def run_fresh(idea: str | None = None, tone: str | None = None) -> Crew:
-    """Fresh Crew kickoff with checkpointing on.
-
-    Writes two checkpoints (one per ``task_completed``). Returns the crew
-    so the caller can inspect ``crew.tasks[-1].output``.
-    """
-    crew = _build_crew()
-    inputs = {"idea": idea or DEFAULT_IDEA, "tone": tone or DEFAULT_TONE}
-    crew.kickoff(inputs=inputs, from_checkpoint=_checkpoint_config())
+def run_fresh(topic: str | None = None, audience: str | None = None) -> Crew:
+    """Kick off with checkpointing already on the crew (see ``build_crew``)."""
+    crew = build_crew()
+    crew.kickoff(
+        inputs={
+            "topic": topic or DEFAULT_TOPIC,
+            "audience": audience or DEFAULT_AUDIENCE,
+        },
+    )
     return crew
 
 
-def resume_from(checkpoint_path: str) -> Crew:
-    """Resume on the SAME branch — continue as if nothing happened.
+def resume_from(restore_from: str) -> Crew:
+    """Continue the **same** branch with snapshot inputs — not for changing ``topic``/``audience``.
 
-    Rehydrates the snapshot. Any task that already completed keeps its output.
-    Remaining tasks run with the original inputs from the snapshot. New
-    checkpoints land on the same branch with ``parent_id`` pointing at the
-    snapshot — a straight continuation of the lineage.
+    Use this after an interrupt or error when you want the exact same run to proceed.
     """
-    cfg = _checkpoint_config(restore_from=checkpoint_path)
+    cfg = checkpoint_config(restore_from=restore_from)
     crew = Crew.from_checkpoint(cfg)
-    # from_checkpoint doesn't re-attach `.checkpoint` — wire it so the
-    # resumed run keeps writing checkpoints.
+    # Continue writing checkpoints on this run (clear restore target only).
     crew.checkpoint = cfg.model_copy(update={"restore_from": None})
     crew.kickoff()
     return crew
 
 
 def fork_from(
-    checkpoint_path: str,
+    restore_from: str,
+    *,
     branch: str = "experiment",
-    idea: str | None = None,
-    tone: str | None = None,
+    inputs: dict[str, str] | None = None,
+    allow_completed: bool = False,
 ) -> Crew:
-    """Fork onto a NEW branch, optionally overriding inputs.
+    """Restore a checkpoint on a **new** branch, then ``kickoff`` with optional input overrides.
 
-    Same restoration as ``resume_from``, but ``Crew.fork(cfg, branch=...)``
-    assigns a new branch label so every subsequent checkpoint carries it.
-    ``parent_id`` still points at the source — so the new branch is a
-    discoverable fork in the lineage tree, not a separate run.
+    Pass only the keys you want to change (e.g. ``{"audience": "…"}``); the rest stay
+    from the checkpoint. Matches ``Crew.fork`` + ``kickoff(inputs=…)`` in the docs.
 
-    ``idea`` / ``tone`` are forwarded to ``kickoff(inputs=...)`` so any task
-    that hasn't completed yet (or any task re-running on the new branch)
-    renders its ``{idea}`` / ``{tone}`` placeholders with the new values.
+    **Important:** if the snapshot already has **every** task completed, a forked
+    ``kickoff`` has nothing left to run (same as resume). For a meaningful fork,
+    use a checkpoint from *after* task 1 or 2, not the final file — or pass
+    ``allow_completed=True`` to skip this guard (SQLite ``db#id`` paths skip it
+    automatically because we cannot inspect them here).
     """
-    cfg = _checkpoint_config(restore_from=checkpoint_path)
+    stats = _crew_completed_vs_total_json(restore_from)
+    if stats is not None and not allow_completed:
+        done, total = stats
+        if done >= total:
+            raise ValueError(
+                f"All {total} crew tasks are already done in this snapshot — fork "
+                "would not re-run work. Pick an earlier checkpoint (e.g. under "
+                f"{_CHECKPOINT_DIR / 'main'!s} with only research or audience-tune "
+                "complete), or pass allow_completed=True."
+            )
+    cfg = checkpoint_config(restore_from=restore_from)
     crew = Crew.fork(cfg, branch=branch)
     crew.checkpoint = cfg.model_copy(update={"restore_from": None})
-
-    overrides: dict[str, str] = {}
-    if idea is not None:
-        overrides["idea"] = idea
-    if tone is not None:
-        overrides["tone"] = tone
-    crew.kickoff(inputs=overrides or None)
+    crew.kickoff(inputs=inputs)
     return crew
 
 
-# ===================================================================
-# Agent demo: fresh + resume (unchanged from prior iteration)
-# ===================================================================
-
-
-def _analyst() -> Agent:
-    return Agent(
-        role="Architecture Analyst",
-        goal="Explain a piece of architecture clearly",
-        backstory="Senior engineer who writes crisp technical explainers.",
-        llm=get_llm(),
-    )
-
-
-def _agent_checkpoint_config(restore_from: str | None = None) -> CheckpointConfig:
-    return CheckpointConfig(
-        location=CHECKPOINT_DB,
-        provider=SqliteProvider(),
-        on_events=["lite_agent_execution_completed"],
-        max_checkpoints=20,
-        restore_from=restore_from,
-    )
-
-
-async def run_fresh_agent(prompt: str | None = None) -> LiteAgentOutput:
-    """Kick off a fresh Architecture Analyst agent with checkpointing."""
-    agent = _analyst()
-    return await agent.kickoff(
-        prompt or DEFAULT_AGENT_PROMPT,
-        from_checkpoint=_agent_checkpoint_config(),
-    )
-
-
-async def resume_agent(
-    prior_output: str,
-    new_prompt: str,
-    checkpoint_path: str,
-) -> LiteAgentOutput:
-    """Resume an agent kickoff with a new prompt, threading prior context in.
-
-    The checkpoint restores agent config + tool usage counters, but NOT the
-    prior kickoff's conversation scratchpad — so the caller passes the prior
-    ``output.raw`` and it's threaded into the new message explicitly.
-    """
-    agent = _analyst()
-    message = f"You previously wrote:\n\n{prior_output}\n\n{new_prompt}"
-    return await agent.kickoff(
-        message,
-        from_checkpoint=_agent_checkpoint_config(restore_from=checkpoint_path),
-    )
-
-
-# ===================================================================
-# CLI entry point — runs the Crew demo + an agent demo as sanity check
-# ===================================================================
-
-
-def _latest_crew_checkpoint_id() -> str | None:
-    """Newest crew checkpoint id, for chaining run_fresh → resume demos."""
-    import sqlite3
-
-    db_path = Path(CHECKPOINT_DB)
-    if not db_path.exists():
-        return None
-    with sqlite3.connect(db_path) as db:
-        row = db.execute(
-            "SELECT id FROM checkpoints "
-            "WHERE json(data) LIKE '%Positioning Strategist%' "
-            "ORDER BY rowid DESC LIMIT 1"
-        ).fetchone()
-    return row[0] if row else None
-
-
-def _latest_agent_checkpoint_id() -> str | None:
-    import sqlite3
-
-    db_path = Path(CHECKPOINT_DB)
-    if not db_path.exists():
-        return None
-    with sqlite3.connect(db_path) as db:
-        row = db.execute(
-            "SELECT id FROM checkpoints "
-            "WHERE json(data) LIKE '%Architecture Analyst%' "
-            "ORDER BY rowid DESC LIMIT 1"
-        ).fetchone()
-    return row[0] if row else None
-
-
 if __name__ == "__main__":
-    # --- Crew demo: fresh kickoff ---
-    crew = run_fresh()
-    print("=== Launch copy (main branch) ===\n")
-    print(crew.tasks[-1].output.raw)
-
-    # --- Crew demo: fork with a different tone ---
-    ck = _latest_crew_checkpoint_id()
-    if ck:
-        print(f"\n=== Forking from {ck} with tone='aggressive' ===\n")
-        forked = fork_from(
-            f"{CHECKPOINT_DB}#{ck}",
-            branch="aggressive",
-            tone="aggressive and irreverent",
-        )
-        print(forked.tasks[-1].output.raw)
-
-    # --- Agent demo: fresh + resume ---
-    print("\n=== Agent kickoff #1 ===\n")
-    first = asyncio.run(run_fresh_agent())
-    print(first.raw)
-
-    ck_agent = _latest_agent_checkpoint_id()
-    if ck_agent:
-        print(f"\n=== Agent kickoff #2 (resume from {ck_agent}) ===\n")
-        second = asyncio.run(
-            resume_agent(
-                prior_output=first.raw,
-                new_prompt=DEFAULT_AGENT_FOLLOWUP,
-                checkpoint_path=f"{CHECKPOINT_DB}#{ck_agent}",
-            )
-        )
-        print(second.raw)
+    result_crew = run_fresh()
+    print(result_crew.tasks[-1].output.raw)
+    # resume_from("./.checkpoints.db#20260423T104512_ab12cd34")
+    # fork_from("./.checkpoints/20260423T154939_71d1a9d5_p-20260423T154919_36305730", branch="experiment", inputs={"audience": "senior executives looking for agentic transformation within their org"})

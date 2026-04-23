@@ -40,14 +40,14 @@ Never hardcode a model string in flow code; always route through `get_llm()` so 
 
 ## Architecture
 
-Every feature demo is a `crewai.flow.Flow[State]` with a pydantic `BaseModel` state and `@start()` / `@listen(previous_step)` methods. The Flow wraps one or more `Agent` + `Task` pairs that run via `task.execute_sync()` and write results back onto `self.state`. Keep this shape when adding new demos — notebooks import the Flow class and call `.kickoff(inputs=...)`.
+Most feature demos are a `crewai.flow.Flow[State]` with a pydantic `BaseModel` state and `@start()` / `@listen(previous_step)` methods. The Flow wraps one or more `Agent` + `Task` pairs that run via `task.execute_sync()` and write results back onto `self.state`. **Module 04** is different: a checkpointed `Crew` in `checkpoint_flow.py` (three tasks), not a Flow. Keep the Flow shape when adding new Flow-based demos.
 
 Per-module specifics that aren't obvious from reading one file:
 
 - **`skills_flow.py`** — resolves `SKILLS_DIR` with `parents[3]` from the file location (`src/showcase/flows/…` → repo root). `skills/*/SKILL.md` files are the fixtures; agents load them via the `skills=[...]` kwarg.
 - **`planning_flow.py`** — uses `PlanningConfig(reasoning_effort=..., max_attempts=..., max_steps=...)` on the Agent, not a separate planner agent. The executor handles plan → step → observe → replan internally.
 - **`memory_flow.py`** — constructs a `Memory` instance lazily and assigns via `object.__setattr__(self, "memory", ...)` because `Flow` attributes are frozen. Scope isolation uses `memory.scope(f"/{user_id}")`; callers write and recall through the scoped handle.
-- **`checkpoint_flow.py`** — writes to `.checkpoints.db` (sqlite) at repo root, resolved via `parents[3]`. `run_fresh()` starts a new run; `resume_from(path)` restarts using `CheckpointConfig(restore_from=...)`. `fork_from(path, branch=..., **overrides)` diverges onto a new branch with optional input overrides. Agent-level demo via `run_fresh_agent()` / `resume_agent()`. `.checkpoints.db` is git-ignored (via `*.db`) and created at runtime.
+- **`checkpoint_flow.py`** — JsonProvider checkpoints under repo-root `.checkpoints/` (`CHECKPOINT_ROOT`, `parents[3]`). Three-task crew (research → audience tune → tone). `run_fresh()`, `resume_from(path)`, `fork_from(..., inputs=..., allow_completed=...)`. `fork_from` rejects JSON snapshots where every task already completed (nothing left to run). Helpers: `list_crew_checkpoint_files`, `forkable_crew_checkpoint_paths`.
 
 ## Conventions
 

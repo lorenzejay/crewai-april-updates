@@ -1,6 +1,6 @@
 # CrewAI April 2026 Feature Showcase
 
-A follow-along tour of five notable CrewAI features shipped through April 2026. Every runtime use case is built on top of a `Flow`.
+A follow-along tour of five notable CrewAI features shipped through April 2026. Most runtime demos use a `Flow`; Module 04 uses a checkpointed `Crew`.
 
 ## Modules
 
@@ -10,7 +10,7 @@ A follow-along tour of five notable CrewAI features shipped through April 2026. 
 | 01 | Agent Skills | `SKILL.md` packs with progressive disclosure | v1.12.0 | [`01_agent_skills.ipynb`](notebooks/01_agent_skills.ipynb) | `skills_flow.py` |
 | 02 | Plan-and-Execute | Planner → StepExecutor → Observer executor | v1.14.0 | [`02_plan_and_execute.ipynb`](notebooks/02_plan_and_execute.ipynb) | `planning_flow.py` |
 | 03 | Unified Memory | Single `Memory` API with scope isolation | PR #4420 | [`03_unified_memory.ipynb`](notebooks/03_unified_memory.ipynb) | `memory_flow.py` |
-| 04 | Checkpointing | `CheckpointConfig` + resume + fork | v1.14.0–1.14.3 | [`04_checkpointing.ipynb`](notebooks/04_checkpointing.ipynb) | `checkpoint_flow.py` |
+| 04 | Checkpointing | `CheckpointConfig` + resume + fork | v1.14.0–1.14.3 | [`04_checkpointing.ipynb`](notebooks/04_checkpointing.ipynb) | `checkpoint_flow.py` (Crew) |
 
 Start with [Module 00](notebooks/00_build_with_ai.ipynb) — it sets up your coding agent for the rest of the tour.
 
@@ -66,7 +66,7 @@ python -m showcase.flows.checkpoint_flow
 ├── skills/               # SKILL.md fixtures used by Module 01
 ├── src/showcase/
 │   ├── shared/llm.py     # provider config (Claude Sonnet / OpenAI fallback)
-│   └── flows/            # One Flow per feature
+│   └── flows/            # One demo module per feature (Flows; 04 = Crew)
 ├── .checkpoints/         # Created at runtime by Module 04
 ├── .env.example
 └── pyproject.toml        # crewai[tools,qdrant,anthropic] + jupyter
