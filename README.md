@@ -1,4 +1,4 @@
-# CrewAI April 2026 Feature Showcase
+# CrewAI April 2026 Feature Showcase!
 
 A follow-along tour of five notable CrewAI features shipped through April 2026. Most runtime demos use a `Flow`; Module 04 uses a checkpointed `Crew`.
 
