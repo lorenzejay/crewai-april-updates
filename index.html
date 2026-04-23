@@ -793,6 +793,126 @@ body {
 .compare-card .steps li::before { content: "→"; position: absolute; left: 0; color: var(--coral); }
 
 /* ================================================================
+   METHOD CARDS — 3-up reference grid (used on checkpointing slide 11)
+   Each card: signature up top, one-line "what", one-line "when to use."
+   ================================================================ */
+.slide-methods .slide-content { justify-content: space-between; gap: var(--content-gap); }
+.slide-methods h2 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(1.4rem, 3.2vw, 2.5rem);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  max-width: 22ch;
+}
+.slide-methods h2 .accent { color: var(--coral); font-style: italic; }
+.slide-methods .subhead {
+  font-size: var(--body-size);
+  color: var(--ink-soft);
+  line-height: 1.5;
+  margin-top: 0.3em;
+  max-width: 60ch;
+}
+.method-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(0.85rem, 1.5vw, 1.35rem);
+  flex: 1;
+  min-height: 0;
+  align-items: center; /* content-sized cards, centered vertically — no ghost middle */
+}
+.method-card {
+  background: var(--bg-card);
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  padding: clamp(1.3rem, 2.2vw, 1.9rem);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.85rem, 1.5vw, 1.25rem);
+  position: relative;
+  overflow: hidden;
+}
+.method-card::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--coral) 0%, transparent 55%);
+}
+.method-card .sig {
+  font-family: var(--font-mono);
+  font-size: clamp(1.05rem, 1.55vw, 1.45rem);
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--ink);
+  word-break: break-word;
+}
+.method-card .sig .fn { color: var(--coral); font-weight: 700; }
+.method-card .sig .arg { color: var(--ink-soft); }
+.method-card .sig .str { color: var(--coral-soft); }
+.method-card .does {
+  font-size: clamp(0.95rem, 1.3vw, 1.15rem);
+  color: var(--ink);
+  line-height: 1.55;
+}
+.method-card .does code,
+.method-card .use code {
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  color: var(--coral-soft);
+  background: var(--bg-elevated);
+  padding: 0.12em 0.38em;
+  border-radius: 3px;
+}
+.method-card .use {
+  font-size: clamp(0.9rem, 1.2vw, 1.1rem);
+  color: var(--ink-soft);
+  line-height: 1.5;
+  padding-top: clamp(0.7rem, 1.2vw, 1rem);
+  border-top: 1px dashed var(--rule);
+}
+.method-card .use strong {
+  display: block;
+  margin-bottom: 0.45em;
+  font-family: var(--font-mono);
+  font-size: clamp(0.72rem, 0.9vw, 0.85rem);
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--coral);
+}
+
+/* Inline lineage diagrams on each method card — show where the replay starts. */
+.lineage-viz {
+  width: 100%;
+  height: auto;
+  margin: clamp(-0.2rem, -0.3vw, -0.1rem) 0 clamp(0.2rem, 0.4vw, 0.35rem);
+  display: block;
+}
+.lineage-viz .track { stroke: var(--coral); stroke-width: 2.2; fill: none; }
+.lineage-viz .track-dim { opacity: 0.32; }
+.lineage-viz .track-dashed { stroke-dasharray: 4 4; }
+.lineage-viz .node { fill: var(--coral); }
+.lineage-viz .node-dim { opacity: 0.35; }
+.lineage-viz .node-hollow { fill: var(--bg); stroke: var(--coral); stroke-width: 2; }
+.lineage-viz .node-active {
+  fill: var(--coral);
+  filter: drop-shadow(0 0 5px rgba(255, 107, 90, 0.7));
+}
+.lineage-viz .arrow { stroke: var(--coral); stroke-width: 1.6; fill: none; stroke-linecap: round; }
+.lineage-viz .viz-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  fill: var(--ink-faint);
+  letter-spacing: 0.1em;
+}
+.lineage-viz .viz-label.accent { fill: var(--coral); }
+
+@media (max-width: 900px) {
+  .method-cards { grid-template-columns: 1fr; align-items: stretch; }
+}
+
+/* ================================================================
    ANIMATIONS (intersection-observer driven)
    ================================================================ */
 .reveal {
@@ -1223,7 +1343,7 @@ crewai deploy
       </div>
       <div class="module-body">
         <h2 class="reveal d-2" data-editable>
-          Snapshot the runtime. <span class="accent">Rewind anywhere.</span>
+          Snapshot the runtime. <span class="accent">Replay from any step.</span>
         </h2>
         <ul class="bullets">
           <li class="reveal d-3" data-editable>Works on <strong>Flow</strong>, <strong>Crew</strong>, and — new — <strong><code>Agent.kickoff()</code></strong>.</li>
@@ -1238,41 +1358,110 @@ crewai deploy
 </section>
 
 <!-- ================================================================
-     SLIDE 11 — CHECKPOINTING · RESUME + FORK
+     SLIDE 11 — CHECKPOINTING · THREE METHODS
+     The shape of the checkpointing API in one reference view.
      ================================================================ -->
-<section class="slide slide-code">
+<section class="slide slide-methods">
   <div class="slide-content">
     <div class="top-bar reveal-fade d-1">
       <span class="tag"><span class="num">05</span> Checkpointing</span>
       <span class="slide-counter">11 / 12</span>
     </div>
-    <div class="code-layout">
-      <div class="text-col">
-        <h2 class="reveal d-2" data-editable>
-          Rewind. <span class="accent">Override.</span> Branch.
-        </h2>
-        <p class="subhead reveal d-3" data-editable>
-          Resume rehydrates state and continues. Fork adds a branch label and lets you override any input before the kickoff continues.
-        </p>
+    <div>
+      <h2 class="reveal d-2" data-editable>
+        Three methods. <span class="accent">Pick the shape.</span>
+      </h2>
+      <p class="subhead reveal d-3" data-editable>
+        Same <code>CheckpointConfig</code>. Every Flow, Crew, and Agent has all three.
+      </p>
+    </div>
+    <div class="method-cards">
+      <div class="method-card reveal d-4" data-editable>
+        <div class="sig">
+          .<span class="fn">kickoff</span>(from_checkpoint=cfg)
+        </div>
+        <!-- Diagram: fresh run — a new track, a checkpoint after each step. -->
+        <svg class="lineage-viz" viewBox="0 0 220 46" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <line class="track" x1="16" y1="28" x2="204" y2="28" />
+          <circle class="node" cx="16"  cy="28" r="5" />
+          <circle class="node" cx="78"  cy="28" r="5" />
+          <circle class="node" cx="140" cy="28" r="5" />
+          <circle class="node node-active" cx="204" cy="28" r="7" />
+          <text class="viz-label" x="16"  y="14" text-anchor="middle">start</text>
+          <text class="viz-label accent" x="204" y="14" text-anchor="middle">now</text>
+        </svg>
+        <div class="does">
+          Start a run with checkpointing on. If <code>cfg.restore_from</code> is set,
+          it's a resume instead of a fresh run.
+        </div>
+        <div class="use">
+          <strong>Use when</strong>
+          Default entry. One method for both "turn it on" and "pick up where you left off."
+        </div>
       </div>
-      <div class="code-block reveal d-4" data-editable>
-<span class="cmt"># Resume — rehydrate + continue on the same branch</span>
-crew = <span class="fn">Crew.from_checkpoint</span>(cfg)
-crew.<span class="fn">kickoff</span>()
-
-<span class="cmt"># Fork — diverge on a new branch, override inputs</span>
-crew = <span class="fn">Crew.fork</span>(cfg, branch=<span class="str">"aggressive"</span>)
-crew.<span class="fn">kickoff</span>(inputs={<span class="str">"tone"</span>: <span class="str">"aggressive and irreverent"</span>})
-
-<span class="cmt"># Or from the CLI — no code required</span>
-<span class="kw">$</span> crewai checkpoint resume <span class="str">&lt;ID&gt;</span>
+      <div class="method-card reveal d-5" data-editable>
+        <div class="sig">
+          .<span class="fn">from_checkpoint</span>(cfg)
+        </div>
+        <!-- Diagram: same track — restore from node 3, run continues on the same branch. -->
+        <svg class="lineage-viz" viewBox="0 0 220 46" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <line class="track" x1="16"  y1="28" x2="140" y2="28" />
+          <line class="track track-dashed" x1="140" y1="28" x2="204" y2="28" />
+          <circle class="node" cx="16"  cy="28" r="5" />
+          <circle class="node" cx="78"  cy="28" r="5" />
+          <circle class="node node-active" cx="140" cy="28" r="7" />
+          <circle class="node node-hollow" cx="204" cy="28" r="5" />
+          <!-- small down-arrow pointing at the restore node -->
+          <path class="arrow" d="M 140 8 L 140 18 M 136 15 L 140 18 L 144 15" />
+          <text class="viz-label accent" x="140" y="6" text-anchor="middle">replay here</text>
+        </svg>
+        <div class="does">
+          Restore and <strong>return the rehydrated instance</strong> on the same branch.
+          Same inputs. Completed steps kept.
+        </div>
+        <div class="use">
+          <strong>Use when</strong>
+          You want the restored entity back — to inspect state, or to mutate fields before kickoff.
+        </div>
+      </div>
+      <div class="method-card reveal d-6" data-editable>
+        <div class="sig">
+          .<span class="fn">fork</span>(cfg, branch=<span class="str">"…"</span>)
+        </div>
+        <!-- Diagram: main track continues faded; a new branch forks off node 3. -->
+        <svg class="lineage-viz" viewBox="0 0 220 46" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <!-- main branch, top, dimmed -->
+          <line class="track track-dim" x1="16" y1="14" x2="204" y2="14" />
+          <circle class="node node-dim" cx="16"  cy="14" r="4" />
+          <circle class="node node-dim" cx="78"  cy="14" r="4" />
+          <circle class="node node-active" cx="140" cy="14" r="6" />
+          <circle class="node node-dim" cx="204" cy="14" r="4" />
+          <!-- connector curving down from the fork point -->
+          <path class="track" d="M 140 19 Q 140 32, 156 34" />
+          <!-- fork branch, bottom -->
+          <line class="track" x1="156" y1="34" x2="204" y2="34" />
+          <circle class="node" cx="180" cy="34" r="4" />
+          <circle class="node node-hollow" cx="204" cy="34" r="4" />
+          <text class="viz-label" x="16" y="7">main</text>
+          <text class="viz-label accent" x="156" y="44">experiment</text>
+        </svg>
+        <div class="does">
+          Restore AND tag a new branch. New checkpoints land on their own lineage;
+          <code>parent_id</code> points at the source.
+        </div>
+        <div class="use">
+          <strong>Use when</strong>
+          Experimenting — try a different input from the same point without clobbering <code>main</code>.
+        </div>
       </div>
     </div>
-    <div class="footnote reveal d-5" data-editable>
-      <span class="pill">gotcha</span> SqliteProvider wants the <code>&quot;db_path#id&quot;</code> form on <code>restore_from</code>.
+    <div class="footnote reveal-fade d-6" data-editable>
+      <span class="pill">gotcha</span> After <code>from_checkpoint</code> / <code>fork</code>, wire
+      <code>instance.checkpoint = cfg.model_copy(update={"restore_from": None})</code>
+      so the resumed run keeps writing new checkpoints.
     </div>
   </div>
-  <img class="logo reveal-fade d-5" src="crew_only_logo.png" alt="crewai" />
+  <img class="logo reveal-fade d-6" src="crew_only_logo.png" alt="crewai" />
 </section>
 
 <!-- ================================================================
