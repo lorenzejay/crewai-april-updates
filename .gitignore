@@ -12,6 +12,5 @@ build/
 *.egg-info/
 .agents
 .claude
-crewai-showcase-slides.html
 .checkpoints.
 skills-lock.json

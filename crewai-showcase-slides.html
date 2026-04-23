@@ -1,0 +1,1491 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CrewAI April 2026 — Five features that changed how we build</title>
+
+<!-- ================================================================
+     FONTS
+     Display: Clash Display (Fontshare)
+     Body:    Satoshi (Fontshare)
+     Mono:    JetBrains Mono (Google) — for all code moments
+     ================================================================ -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="preconnect" href="https://api.fontshare.com" />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<link href="https://api.fontshare.com/v2/css?f[]=clash-display@500,600,700&f[]=satoshi@400,500,700&display=swap" rel="stylesheet" />
+
+<style>
+/* ================================================================
+   VIEWPORT BASE — every slide locked to exactly 100vh
+   ================================================================ */
+html, body { height: 100%; overflow-x: hidden; }
+html { scroll-snap-type: y mandatory; scroll-behavior: smooth; }
+.slide {
+  width: 100vw; height: 100vh; height: 100dvh;
+  overflow: hidden; scroll-snap-align: start;
+  display: flex; flex-direction: column; position: relative;
+}
+.slide-content {
+  flex: 1; display: flex; flex-direction: column;
+  max-height: 100%; overflow: hidden;
+  padding: var(--slide-padding);
+}
+:root {
+  --title-size: clamp(1.75rem, 4.2vw, 3.75rem);
+  --h2-size: clamp(1.15rem, 2.6vw, 2rem);
+  --h3-size: clamp(0.95rem, 1.6vw, 1.35rem);
+  --body-size: clamp(0.8rem, 1.1vw, 1rem);
+  --small-size: clamp(0.65rem, 0.85vw, 0.8rem);
+  --mono-size: clamp(0.7rem, 0.95vw, 0.9rem);
+  --chip-size: clamp(0.68rem, 0.85vw, 0.8rem);
+  --slide-padding: clamp(1.5rem, 3.5vw, 3rem);
+  --content-gap: clamp(0.6rem, 1.6vw, 1.5rem);
+}
+@media (max-height: 780px) {
+  :root {
+    --title-size: clamp(1.5rem, 3.5vw, 2.75rem);
+    --slide-padding: clamp(1.2rem, 3vw, 2.25rem);
+  }
+}
+@media (max-height: 600px) {
+  :root {
+    --title-size: clamp(1.25rem, 3vw, 2.25rem);
+    --slide-padding: clamp(1rem, 2.5vw, 1.75rem);
+  }
+  .nav-dots, .keyboard-hint { display: none; }
+}
+@media (max-width: 700px) {
+  :root { --title-size: clamp(1.4rem, 6.5vw, 2.5rem); }
+  .slide-overview .cards-row { grid-template-columns: 1fr !important; }
+  .slide-module-intro .module-intro-grid { grid-template-columns: 1fr !important; }
+  .compare-grid { grid-template-columns: 1fr !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.2s !important; }
+  html { scroll-behavior: auto; }
+}
+
+/* ================================================================
+   THEME — CrewAI Dark
+   ================================================================ */
+:root {
+  --bg: #161616;
+  --bg-elevated: #1d1d1d;
+  --bg-card: #1a1a1a;
+  --bg-chip: #121212;
+  --ink: #f4f2ee;
+  --ink-soft: #a3a098;
+  --ink-faint: #55524c;
+  --coral: #ff6b5a;
+  --coral-soft: #ffaa9e;
+  --coral-glow: rgba(255, 107, 90, 0.18);
+  --rule: rgba(244, 242, 238, 0.08);
+  --rule-strong: rgba(244, 242, 238, 0.14);
+  --font-display: "Clash Display", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Satoshi", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  --ease-out-expo: cubic-bezier(0.22, 1, 0.36, 1);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* ================================================================
+   SLIDE CHROME — grid texture, coral glow, top bar, logo
+   ================================================================ */
+.slide::before {
+  content: "";
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(var(--rule) 1px, transparent 1px),
+    linear-gradient(90deg, var(--rule) 1px, transparent 1px);
+  background-size: 64px 64px;
+  opacity: 0.35;
+  pointer-events: none; z-index: 0;
+}
+.slide::after {
+  content: "";
+  position: absolute;
+  left: -10vw; bottom: -20vh;
+  width: 50vw; height: 50vw;
+  max-width: 700px; max-height: 700px;
+  background: radial-gradient(closest-side, var(--coral-glow), transparent 70%);
+  pointer-events: none; z-index: 0;
+}
+.slide-content { position: relative; z-index: 1; }
+
+/* Top bar: module chip + slide counter */
+.top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--content-gap);
+  font-family: var(--font-body);
+  font-size: var(--small-size);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.tag {
+  display: inline-flex; align-items: center; gap: 0.55em;
+  padding: 0.35em 0.9em;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  color: var(--ink);
+  background: rgba(255,255,255,0.02);
+  font-size: var(--small-size);
+}
+.tag::before {
+  content: "";
+  width: 0.5em; height: 0.5em;
+  background: var(--coral);
+  border-radius: 50%;
+  box-shadow: 0 0 12px var(--coral);
+}
+.tag .num {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--coral);
+  margin-right: 0.2em;
+}
+.slide-counter { color: var(--ink-faint); font-family: var(--font-mono); }
+
+/* Logo — real PNG bottom-right on every slide */
+.logo {
+  position: absolute;
+  right: var(--slide-padding);
+  bottom: calc(var(--slide-padding) * 0.75);
+  height: clamp(1.4rem, 2.2vw, 2rem);
+  width: auto;
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* Progress bar top-fixed */
+.progress-bar {
+  position: fixed; top: 0; left: 0;
+  height: 2px; width: 0%;
+  background: var(--coral);
+  box-shadow: 0 0 12px var(--coral-glow);
+  z-index: 100;
+  transition: width 0.2s linear;
+}
+
+/* Right-edge nav dots */
+.nav-dots {
+  position: fixed;
+  right: clamp(0.75rem, 1.5vw, 1.25rem);
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex; flex-direction: column;
+  gap: clamp(0.4rem, 0.8vw, 0.7rem);
+  z-index: 50;
+}
+.nav-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--ink-faint);
+  opacity: 0.5;
+  cursor: pointer;
+  transition: all 0.25s var(--ease-out-expo);
+  border: none; padding: 0;
+}
+.nav-dot:hover { opacity: 1; transform: scale(1.3); }
+.nav-dot.active {
+  background: var(--coral); opacity: 1;
+  transform: scale(1.5);
+  box-shadow: 0 0 8px var(--coral-glow);
+}
+
+/* Keyboard hint (auto-fades on first slide) */
+.keyboard-hint {
+  position: fixed;
+  bottom: clamp(0.75rem, 1.5vw, 1.25rem);
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-mono);
+  font-size: var(--small-size);
+  color: var(--ink-faint);
+  letter-spacing: 0.1em;
+  z-index: 50;
+  opacity: 0;
+  animation: hintPulse 0.5s 1.5s forwards;
+}
+@keyframes hintPulse {
+  0% { opacity: 0; } 20% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; }
+}
+.keyboard-hint kbd {
+  font-family: var(--font-mono);
+  background: var(--bg-elevated);
+  border: 1px solid var(--rule);
+  padding: 0.15em 0.45em;
+  border-radius: 4px;
+  margin: 0 0.15em;
+  color: var(--ink-soft);
+}
+
+/* ================================================================
+   HERO SLIDE (title + closing)
+   ================================================================ */
+.slide-hero .slide-content { justify-content: space-between; }
+.slide-hero .hero {
+  display: flex; flex-direction: column;
+  gap: clamp(0.5rem, 1.2vw, 1rem);
+}
+.slide-hero .eyebrow {
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: var(--small-size);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--coral);
+}
+.slide-hero h1 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--title-size);
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  max-width: 16ch;
+}
+.slide-hero h1 .accent { font-weight: 700; font-style: italic; color: var(--coral); }
+.slide-hero .lede {
+  max-width: 48ch;
+  font-size: var(--body-size);
+  line-height: 1.55;
+  color: var(--ink-soft);
+}
+.modules-rail {
+  display: flex;
+  gap: clamp(0.6rem, 1.5vw, 1.4rem);
+  flex-wrap: wrap;
+  font-family: var(--font-body);
+  font-size: var(--small-size);
+  color: var(--ink-faint);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+.modules-rail span { display: inline-flex; align-items: center; gap: 0.45em; }
+.modules-rail span::before {
+  content: "";
+  width: 6px; height: 6px;
+  border-radius: 1px;
+  background: var(--ink-faint);
+  transform: rotate(45deg);
+}
+.modules-rail span.active { color: var(--ink); }
+.modules-rail span.active::before { background: var(--coral); box-shadow: 0 0 8px var(--coral); }
+.slide-hero.closing h1 { max-width: 22ch; }
+.slide-hero.closing .cta {
+  margin-top: clamp(0.75rem, 1.5vw, 1.25rem);
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.6em;
+  font-family: var(--font-mono);
+  font-size: var(--body-size);
+  color: var(--ink-soft);
+  max-width: 48rem;
+}
+.slide-hero.closing .cta code {
+  font-family: var(--font-mono);
+  color: var(--coral);
+  background: var(--bg-elevated);
+  border: 1px solid var(--rule);
+  padding: 0.6em 0.8em;
+  border-radius: 6px;
+  display: inline-block;
+}
+
+/* ================================================================
+   OVERVIEW GRID (slide 02)
+   ================================================================ */
+.slide-overview .slide-content { justify-content: space-between; gap: var(--content-gap); }
+.slide-overview h2 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--title-size);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  max-width: 22ch;
+}
+.slide-overview h2 .accent { color: var(--coral); font-style: italic; }
+.cards-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: clamp(0.6rem, 1.2vw, 1.1rem);
+  margin-top: clamp(0.75rem, 1.5vw, 1.5rem);
+}
+.feature-card {
+  background: var(--bg-card);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  padding: clamp(0.85rem, 1.6vw, 1.3rem);
+  display: flex; flex-direction: column;
+  gap: clamp(0.4rem, 0.8vw, 0.6rem);
+  position: relative;
+  transition: all 0.35s var(--ease-out-expo);
+}
+.feature-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--rule-strong);
+  box-shadow: 0 12px 32px rgba(0,0,0,0.4), 0 0 24px var(--coral-glow);
+}
+.feature-card .num {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: var(--h3-size);
+  color: var(--coral);
+  line-height: 1;
+}
+.feature-card .name {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(0.95rem, 1.4vw, 1.25rem);
+  line-height: 1.15;
+  color: var(--ink);
+}
+.feature-card .blurb {
+  font-size: var(--small-size);
+  line-height: 1.45;
+  color: var(--ink-soft);
+}
+.feature-card .release {
+  margin-top: auto;
+  font-family: var(--font-mono);
+  font-size: clamp(0.6rem, 0.75vw, 0.72rem);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* ================================================================
+   MODULE INTRO — big number left, headline+content right
+   ================================================================ */
+.slide-module-intro .slide-content { justify-content: space-between; gap: var(--content-gap); }
+.module-intro-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  gap: clamp(1.5rem, 4vw, 4rem);
+  align-items: center;
+  flex: 1;
+  min-height: 0;
+}
+.module-ident {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.5rem, 1vw, 0.9rem);
+}
+.module-number {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(5.5rem, 16vw, 14rem);
+  line-height: 0.85;
+  letter-spacing: -0.06em;
+  color: var(--coral);
+  user-select: none;
+}
+.module-label {
+  font-family: var(--font-mono);
+  font-size: var(--small-size);
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  max-width: 22ch;
+  line-height: 1.3;
+}
+
+/* Code chip — the "here's the API" moment. Sits right under the big
+   module number so the pairing reads as: big-number → what it gives you. */
+.code-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6em;
+  background: #0d0d0d;
+  border: 1px solid var(--rule-strong);
+  border-left: 3px solid var(--coral);
+  border-radius: 8px;
+  padding: clamp(0.7em, 1.1vw, 1em) clamp(0.95em, 1.4vw, 1.3em);
+  font-family: var(--font-mono);
+  font-size: clamp(0.95rem, 1.35vw, 1.3rem);
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--ink);
+  max-width: 100%;
+  overflow-x: auto;
+  white-space: nowrap;
+  scrollbar-width: none;
+  align-self: flex-start;
+  position: relative;
+  /* Layered shadows: a tight rim, a dropped shadow for weight,
+     and a soft coral halo that makes the chip read as "hot". */
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.02),
+    0 10px 36px rgba(0, 0, 0, 0.45),
+    0 0 48px rgba(255, 107, 90, 0.22);
+}
+.code-chip::-webkit-scrollbar { display: none; }
+.code-chip .kw { color: var(--coral); font-weight: 600; }
+.code-chip .str { color: var(--coral-soft); }
+.code-chip .fn { color: var(--ink); font-weight: 600; }
+.code-chip .dim { color: var(--ink-faint); }
+.code-chip .cmt { color: var(--ink-faint); font-style: italic; }
+
+/* Fall back to wrapping on very narrow viewports where nowrap would
+   force horizontal scroll on the longest chip. */
+@media (max-width: 1100px) {
+  .code-chip { white-space: normal; word-break: break-word; }
+}
+
+/* Right-column body */
+.module-body { display: flex; flex-direction: column; gap: clamp(0.75rem, 1.6vw, 1.4rem); }
+.module-body h2 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(1.5rem, 3.5vw, 2.75rem);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  max-width: 20ch;
+}
+.module-body h2 .accent { color: var(--coral); font-style: italic; }
+.module-body .bullets {
+  list-style: none;
+  display: flex; flex-direction: column;
+  gap: clamp(0.5rem, 1vw, 0.85rem);
+}
+.module-body .bullets li {
+  font-size: var(--body-size);
+  line-height: 1.5;
+  color: var(--ink-soft);
+  padding-left: 1.6em;
+  position: relative;
+}
+.module-body .bullets li::before {
+  content: ""; position: absolute;
+  left: 0; top: 0.55em;
+  width: 0.8em; height: 1px;
+  background: var(--coral);
+}
+.module-body .bullets li strong { color: var(--ink); font-weight: 600; }
+.module-body .bullets li code {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  color: var(--coral-soft);
+  background: var(--bg-elevated);
+  padding: 0.1em 0.4em;
+  border-radius: 3px;
+}
+
+/* Role cards (Plan & Execute module) */
+.role-cards { display: grid; grid-template-columns: 1fr; gap: clamp(0.5rem, 1vw, 0.85rem); }
+.role-card { border-left: 2px solid var(--coral); padding: 0.15em 0 0.15em 0.9em; }
+.role-card .name {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--h3-size);
+  color: var(--ink);
+  line-height: 1.1;
+}
+.role-card .desc {
+  font-size: var(--body-size);
+  color: var(--ink-soft);
+  line-height: 1.45;
+  margin-top: 0.2em;
+}
+
+/* Pattern cards (Memory isolation) */
+.pattern-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(0.5rem, 1vw, 0.9rem); }
+.pattern-card {
+  background: var(--bg-card);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  padding: clamp(0.75rem, 1.4vw, 1.1rem);
+  display: flex; flex-direction: column;
+  gap: 0.4em;
+}
+.pattern-card .name {
+  font-family: var(--font-mono);
+  font-size: clamp(0.75rem, 1vw, 0.9rem);
+  font-weight: 700;
+  color: var(--coral);
+}
+.pattern-card .desc { font-size: var(--small-size); color: var(--ink-soft); line-height: 1.45; }
+@media (max-width: 900px) { .pattern-cards { grid-template-columns: 1fr; } }
+
+/* ================================================================
+   CODE SLIDE (install / demo / resume-fork)
+   Two-column: text on the left, code block on the right.
+   ================================================================ */
+.slide-code .slide-content { justify-content: space-between; gap: var(--content-gap); }
+.slide-code .code-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  gap: clamp(1.5rem, 3vw, 3rem);
+  flex: 1;
+  min-height: 0;
+  align-items: center;
+}
+.slide-code .text-col {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.5rem, 1vw, 0.85rem);
+}
+@media (max-width: 900px) {
+  .slide-code .code-layout { grid-template-columns: 1fr; align-items: start; }
+}
+.slide-code h2 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(1.4rem, 3.2vw, 2.5rem);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  max-width: 18ch;
+}
+.slide-code h2 .accent { color: var(--coral); font-style: italic; }
+.slide-code .subhead {
+  font-size: var(--body-size);
+  color: var(--ink-soft);
+  line-height: 1.5;
+  max-width: 44ch;
+}
+.code-block {
+  background: #0f0f0f;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  padding: clamp(0.9rem, 1.8vw, 1.5rem);
+  font-family: var(--font-mono);
+  font-size: var(--mono-size);
+  line-height: 1.7;
+  color: var(--ink);
+  overflow: hidden;
+  position: relative;
+  max-width: 100%;
+  align-self: stretch;
+  /* Preserve the \n's in the HTML source so each command stays on its own
+     line. pre-wrap also lets overly long lines wrap gracefully. */
+  white-space: pre-wrap;
+  word-break: break-word;
+  tab-size: 2;
+}
+.code-block::before {
+  content: ""; position: absolute; top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--coral) 0%, transparent 40%);
+}
+.code-block .cmt { color: var(--ink-faint); font-style: italic; }
+.code-block .kw { color: var(--coral); }
+.code-block .str { color: var(--coral-soft); }
+.code-block .num-lit { color: #95d0a0; }
+.code-block .fn { color: var(--ink); font-weight: 500; }
+.footnote {
+  font-family: var(--font-mono);
+  font-size: var(--small-size);
+  letter-spacing: 0.05em;
+  color: var(--ink-faint);
+}
+.footnote .pill {
+  display: inline-block;
+  padding: 0.2em 0.6em;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  margin-right: 0.5em;
+  color: var(--ink-soft);
+}
+
+/* ================================================================
+   COMPARE SLIDE (shallow vs deep)
+   ================================================================ */
+.slide-compare .slide-content { justify-content: space-between; gap: var(--content-gap); }
+.slide-compare h2 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(1.4rem, 3.2vw, 2.5rem);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  max-width: 22ch;
+}
+.slide-compare h2 .accent { color: var(--coral); font-style: italic; }
+.slide-compare .subhead {
+  font-size: var(--body-size);
+  color: var(--ink-soft);
+  line-height: 1.5;
+  margin-top: 0.3em;
+}
+.compare-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(0.75rem, 1.6vw, 1.4rem);
+  flex: 1;
+  min-height: 0;
+}
+.compare-card {
+  background: var(--bg-card);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  padding: clamp(1rem, 1.8vw, 1.5rem);
+  display: flex; flex-direction: column;
+  gap: clamp(0.5rem, 1vw, 0.85rem);
+}
+.compare-card.accent { border-color: rgba(255, 107, 90, 0.4); }
+.compare-card .label {
+  font-family: var(--font-mono);
+  font-size: clamp(0.7rem, 0.9vw, 0.85rem);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--coral);
+}
+.compare-card .headline {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(1.1rem, 1.8vw, 1.5rem);
+  line-height: 1.15;
+  color: var(--ink);
+}
+.compare-card .body {
+  font-size: var(--body-size);
+  color: var(--ink-soft);
+  line-height: 1.55;
+}
+.compare-card .steps {
+  font-family: var(--font-mono);
+  font-size: var(--small-size);
+  color: var(--ink-soft);
+  line-height: 1.6;
+  list-style: none;
+  display: flex; flex-direction: column;
+  gap: 0.25em;
+  margin-top: auto;
+}
+.compare-card .steps li { padding-left: 1.5em; position: relative; }
+.compare-card .steps li::before { content: "→"; position: absolute; left: 0; color: var(--coral); }
+
+/* ================================================================
+   ANIMATIONS (intersection-observer driven)
+   ================================================================ */
+.reveal {
+  opacity: 0;
+  transform: translateY(22px);
+  transition: opacity 0.7s var(--ease-out-expo), transform 0.7s var(--ease-out-expo);
+}
+.slide.visible .reveal { opacity: 1; transform: translateY(0); }
+.slide.visible .reveal.d-1 { transition-delay: 0.05s; }
+.slide.visible .reveal.d-2 { transition-delay: 0.15s; }
+.slide.visible .reveal.d-3 { transition-delay: 0.25s; }
+.slide.visible .reveal.d-4 { transition-delay: 0.35s; }
+.slide.visible .reveal.d-5 { transition-delay: 0.45s; }
+.slide.visible .reveal.d-6 { transition-delay: 0.55s; }
+.reveal-fade {
+  opacity: 0;
+  transition: opacity 0.9s var(--ease-out-expo);
+}
+.slide.visible .reveal-fade { opacity: 1; }
+.reveal-scale {
+  opacity: 0;
+  transform: scale(0.94);
+  transition: opacity 0.7s var(--ease-out-expo), transform 0.7s var(--ease-out-expo);
+}
+.slide.visible .reveal-scale { opacity: 1; transform: scale(1); }
+
+/* ================================================================
+   INLINE EDITING
+   ================================================================ */
+.edit-hotzone {
+  position: fixed; top: 0; left: 0;
+  width: 80px; height: 80px;
+  z-index: 10000;
+  cursor: pointer;
+}
+.edit-toggle {
+  position: fixed;
+  top: clamp(0.8rem, 1.4vw, 1.25rem);
+  left: clamp(0.8rem, 1.4vw, 1.25rem);
+  width: clamp(2.1rem, 3vw, 2.8rem);
+  height: clamp(2.1rem, 3vw, 2.8rem);
+  border-radius: 50%;
+  border: 1px solid var(--rule-strong);
+  background: var(--bg-elevated);
+  color: var(--ink);
+  font-size: clamp(0.9rem, 1.4vw, 1.2rem);
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease, transform 0.3s var(--ease-out-expo);
+  z-index: 10001;
+}
+.edit-toggle:hover { transform: scale(1.08); }
+.edit-toggle.show, .edit-toggle.active { opacity: 1; pointer-events: auto; }
+.edit-toggle.active {
+  background: var(--coral);
+  border-color: var(--coral);
+  color: #0a0a0a;
+  box-shadow: 0 0 16px var(--coral-glow);
+}
+body.editing [data-editable] {
+  outline: 1px dashed transparent;
+  transition: outline-color 0.2s, background 0.2s;
+  cursor: text;
+  border-radius: 4px;
+}
+body.editing [data-editable]:hover { outline-color: var(--coral); background: rgba(255, 107, 90, 0.06); }
+body.editing [data-editable]:focus { outline: 1px solid var(--coral); background: rgba(255, 107, 90, 0.1); }
+.save-indicator {
+  position: fixed;
+  top: calc(clamp(0.8rem, 1.4vw, 1.25rem) + clamp(2.1rem, 3vw, 2.8rem) + 0.5rem);
+  left: clamp(0.8rem, 1.4vw, 1.25rem);
+  font-family: var(--font-mono);
+  font-size: var(--small-size);
+  color: var(--coral);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  z-index: 10001;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.save-indicator.visible { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div class="progress-bar" id="progressBar" aria-hidden="true"></div>
+<nav class="nav-dots" id="navDots" aria-label="Slide navigation"></nav>
+<div class="edit-hotzone" aria-hidden="true"></div>
+<button class="edit-toggle" id="editToggle" title="Edit mode (press E)" aria-label="Toggle edit mode">✏️</button>
+<div class="save-indicator" id="saveIndicator">Saved</div>
+<div class="keyboard-hint" aria-hidden="true">
+  Use <kbd>←</kbd> <kbd>→</kbd> or <kbd>space</kbd> to navigate · <kbd>E</kbd> to edit
+</div>
+
+<!-- ================================================================
+     SLIDE 01 — TITLE
+     ================================================================ -->
+<section class="slide slide-hero">
+  <div class="slide-content">
+    <div class="top-bar reveal-fade d-1">
+      <span class="tag" data-editable>Webinar · OSS latest</span>
+      <span class="slide-counter">01 / 12</span>
+    </div>
+    <div class="hero">
+      <div class="eyebrow reveal d-2" data-editable>CrewAI · April 2026</div>
+      <h1 class="reveal d-3" data-editable>
+        Five features that changed how we <span class="accent">build</span>.
+      </h1>
+      <p class="lede reveal d-4" data-editable>
+        A tour through the updates that landed this spring — from AI-native docs to
+        resumable runs. One idea at a time.
+      </p>
+    </div>
+    <div class="modules-rail reveal-fade d-5">
+      <span class="active">01 Build with AI</span>
+      <span>02 Skills</span>
+      <span>03 Plan &amp; Execute</span>
+      <span>04 Memory</span>
+      <span>05 Checkpointing</span>
+    </div>
+  </div>
+  <img class="logo reveal-fade d-5" src="crew_only_logo.png" alt="crewai" />
+</section>
+
+<!-- ================================================================
+     SLIDE 02 — OVERVIEW
+     ================================================================ -->
+<section class="slide slide-overview">
+  <div class="slide-content">
+    <div class="top-bar reveal-fade d-1">
+      <span class="tag">The tour</span>
+      <span class="slide-counter">02 / 12</span>
+    </div>
+    <h2 class="reveal d-2" data-editable>
+      Five features.<br />
+      <span class="accent">One repo</span> to follow along.
+    </h2>
+    <div class="cards-row">
+      <div class="feature-card reveal d-2" data-editable>
+        <div class="num">01</div>
+        <div class="name">Build with AI</div>
+        <div class="blurb">AI-native docs, skills install, and one-command deploy to AMP.</div>
+        <div class="release">Apr 2026</div>
+      </div>
+      <div class="feature-card reveal d-3" data-editable>
+        <div class="num">02</div>
+        <div class="name">Agent Skills</div>
+        <div class="blurb">Reusable SKILL.md packs with progressive disclosure.</div>
+        <div class="release">v1.12.0</div>
+      </div>
+      <div class="feature-card reveal d-4" data-editable>
+        <div class="num">03</div>
+        <div class="name">Plan &amp; Execute</div>
+        <div class="blurb">Planner → StepExecutor → Observer. Plans, runs, replans.</div>
+        <div class="release">v1.14.0</div>
+      </div>
+      <div class="feature-card reveal d-5" data-editable>
+        <div class="num">04</div>
+        <div class="name">Unified Memory</div>
+        <div class="blurb">One Memory API. Scope, slice, and root_scope isolation.</div>
+        <div class="release">PR #4420</div>
+      </div>
+      <div class="feature-card reveal d-6" data-editable>
+        <div class="num">05</div>
+        <div class="name">Checkpointing</div>
+        <div class="blurb">Snapshot the runtime. Resume or fork with lineage.</div>
+        <div class="release">v1.14.0–1.14.3</div>
+      </div>
+    </div>
+  </div>
+  <img class="logo reveal-fade d-6" src="crew_only_logo.png" alt="crewai" />
+</section>
+
+<!-- ================================================================
+     SLIDE 03 — MODULE 01 · BUILD WITH AI
+     ================================================================ -->
+<section class="slide slide-module-intro">
+  <div class="slide-content">
+    <div class="top-bar reveal-fade d-1">
+      <span class="tag"><span class="num">01</span> Build with AI</span>
+      <span class="slide-counter">03 / 12</span>
+    </div>
+    <div class="module-intro-grid">
+      <div class="module-ident">
+        <div class="module-number reveal-scale d-1">01</div>
+        <div class="code-chip reveal d-2" data-editable>
+          <span class="dim">$</span> <span class="fn">npx</span> skills add <span class="str">crewaiinc/skills</span>
+        </div>
+        <div class="module-label reveal d-3">Build with AI · Apr 2026</div>
+      </div>
+      <div class="module-body">
+        <h2 class="reveal d-2" data-editable>
+          Your coding agent is now <span class="accent">CrewAI-literate</span>.
+        </h2>
+        <ul class="bullets">
+          <li class="reveal d-3" data-editable><strong>Installable skill packs</strong> teach Claude Code, Cursor, Codex, Gemini CLI, and Windsurf the framework idioms.</li>
+          <li class="reveal d-4" data-editable><strong>llms.txt index</strong> at <code>docs.crewai.com/llms.txt</code> keeps your agent current as the framework ships.</li>
+          <li class="reveal d-5" data-editable><strong>Two commands</strong> push a local project to hosted traces + auth + scaling on CrewAI AMP.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <img class="logo reveal-fade d-5" src="crew_only_logo.png" alt="crewai" />
+</section>
+
+<!-- ================================================================
+     SLIDE 04 — BUILD WITH AI · INSTALL
+     ================================================================ -->
+<section class="slide slide-code">
+  <div class="slide-content">
+    <div class="top-bar reveal-fade d-1">
+      <span class="tag"><span class="num">01</span> Build with AI</span>
+      <span class="slide-counter">04 / 12</span>
+    </div>
+    <div class="code-layout">
+      <div class="text-col">
+        <h2 class="reveal d-2" data-editable>
+          One command, <span class="accent">any coding agent</span>.
+        </h2>
+        <p class="subhead reveal d-3" data-editable>
+          Four skills auto-activate on install: <code>getting-started</code>, <code>design-agent</code>,
+          <code>design-task</code>, <code>ask-docs</code>.
+        </p>
+      </div>
+      <div class="code-block reveal d-4" data-editable>
+<span class="cmt"># Claude Code — plugin marketplace</span>
+<span class="kw">/plugin</span> marketplace add crewAIInc/skills
+<span class="kw">/plugin</span> install crewai-skills@crewai-plugins
+<span class="kw">/reload-plugins</span>
+
+<span class="cmt"># Cursor · Codex · Gemini CLI · Windsurf</span>
+npx skills add crewaiinc/skills
+
+<span class="cmt"># Ship it</span>
+crewai deploy --prepare
+crewai deploy
+      </div>
+    </div>
+    <div class="footnote reveal d-5" data-editable>
+      <span class="pill">ask-docs</span> queries <code>llms.txt</code> over MCP — no extra wiring needed.
+    </div>
+  </div>
+  <img class="logo reveal-fade d-5" src="crew_only_logo.png" alt="crewai" />
+</section>
+
+<!-- ================================================================
+     SLIDE 05 — MODULE 02 · AGENT SKILLS
+     ================================================================ -->
+<section class="slide slide-module-intro">
+  <div class="slide-content">
+    <div class="top-bar reveal-fade d-1">
+      <span class="tag"><span class="num">02</span> Agent Skills</span>
+      <span class="slide-counter">05 / 12</span>
+    </div>
+    <div class="module-intro-grid">
+      <div class="module-ident">
+        <div class="module-number reveal-scale d-1">02</div>
+        <div class="code-chip reveal d-2" data-editable>
+          <span class="fn">Agent</span>(<span class="kw">skills</span>=[<span class="str">SKILLS_DIR</span>])
+        </div>
+        <div class="module-label reveal d-3">Agent Skills · v1.12.0</div>
+      </div>
+      <div class="module-body">
+        <h2 class="reveal d-2" data-editable>
+          Reusable instruction packs. <span class="accent">Not prompts.</span>
+        </h2>
+        <ul class="bullets">
+          <li class="reveal d-3" data-editable><strong>SKILL.md</strong> — YAML frontmatter + Markdown body. Version-controlled, hand-written, tool-aware.</li>
+          <li class="reveal d-4" data-editable><strong>Progressive disclosure</strong> — metadata at discovery, full instructions when activated, resource files on demand.</li>
+          <li class="reveal d-5" data-editable>Pass one parent dir; the framework finds every <code>SKILL.md</code> beneath it.</li>
+          <li class="reveal d-6" data-editable>Different from <em>coding-agent skills</em> in Module 01 — these run inside your agent at <strong>runtime</strong>.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <img class="logo reveal-fade d-6" src="crew_only_logo.png" alt="crewai" />
+</section>
+
+<!-- ================================================================
+     SLIDE 06 — MODULE 03 · PLAN-AND-EXECUTE
+     ================================================================ -->
+<section class="slide slide-module-intro">
+  <div class="slide-content">
+    <div class="top-bar reveal-fade d-1">
+      <span class="tag"><span class="num">03</span> Plan &amp; Execute</span>
+      <span class="slide-counter">06 / 12</span>
+    </div>
+    <div class="module-intro-grid">
+      <div class="module-ident">
+        <div class="module-number reveal-scale d-1">03</div>
+        <div class="code-chip reveal d-2" data-editable>
+          <span class="fn">Agent</span>(<span class="kw">planning_config</span>=<span class="fn">PlanningConfig</span>(...))
+        </div>
+        <div class="module-label reveal d-3">Plan-and-Execute · v1.14.0</div>
+      </div>
+      <div class="module-body">
+        <h2 class="reveal d-2" data-editable>
+          One ReAct loop, split into <span class="accent">three roles</span>.
+        </h2>
+        <div class="role-cards">
+          <div class="role-card reveal d-3" data-editable>
+            <div class="name">Planner</div>
+            <div class="desc">Decomposes the task into an ordered <code>TodoList</code> of <code>PlanStep</code>s.</div>
+          </div>
+          <div class="role-card reveal d-4" data-editable>
+            <div class="name">StepExecutor</div>
+            <div class="desc">Runs each step in a bounded multi-turn loop. Doesn't read outer state.</div>
+          </div>
+          <div class="role-card reveal d-5" data-editable>
+            <div class="name">PlannerObserver</div>
+            <div class="desc">Evaluates the result. Decides: continue, replan, or done.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <img class="logo reveal-fade d-5" src="crew_only_logo.png" alt="crewai" />
+</section>
+
+<!-- ================================================================
+     SLIDE 07 — PLAN & EXECUTE · DAYTONA DEMO
+     ================================================================ -->
+<section class="slide slide-code">
+  <div class="slide-content">
+    <div class="top-bar reveal-fade d-1">
+      <span class="tag"><span class="num">03</span> Plan &amp; Execute</span>
+      <span class="slide-counter">07 / 12</span>
+    </div>
+    <div class="code-layout">
+      <div class="text-col">
+        <h2 class="reveal d-2" data-editable>
+          We built a todo app. <span class="accent">Watched it render.</span>
+        </h2>
+        <p class="subhead reveal d-3" data-editable>
+          A Flow provisions a Daytona sandbox. The planning agent writes
+          <code>index.html</code>, <code>style.css</code>, and <code>app.js</code> via
+          <code>DaytonaFileTool</code>. The Flow grabs a live preview URL.
+        </p>
+      </div>
+      <div class="code-block reveal d-4" data-editable>
+<span class="kw">from</span> crewai_tools <span class="kw">import</span> DaytonaFileTool, DaytonaExecTool
+
+builder = <span class="fn">Agent</span>(
+    role=<span class="str">"Frontend Engineer"</span>,
+    llm=<span class="fn">get_llm</span>(),
+    planning_config=<span class="fn">PlanningConfig</span>(reasoning_effort=<span class="str">"medium"</span>),
+    tools=[<span class="fn">DaytonaFileTool</span>(sandbox_id=sid), <span class="fn">DaytonaExecTool</span>(sandbox_id=sid)],
+)
+<span class="kw">await</span> builder.<span class="fn">kickoff</span>(<span class="str">"Build a todo-list app at /app. HTML, CSS, JS."</span>)
+
+link = sandbox.<span class="fn">get_preview_link</span>(<span class="num-lit">8000</span>)  <span class="cmt"># → URL you can open</span>
+      </div>
+    </div>
+    <div class="footnote reveal d-5" data-editable>
+      <span class="pill">demo</span> Notebook renders <code>link.url</code> in an IFrame + snapshots <code>index.html</code>.
+    </div>
+  </div>
+  <img class="logo reveal-fade d-5" src="crew_only_logo.png" alt="crewai" />
+</section>
+
+<!-- ================================================================
+     SLIDE 08 — MODULE 04 · UNIFIED MEMORY
+     ================================================================ -->
+<section class="slide slide-module-intro">
+  <div class="slide-content">
+    <div class="top-bar reveal-fade d-1">
+      <span class="tag"><span class="num">04</span> Unified Memory</span>
+      <span class="slide-counter">08 / 12</span>
+    </div>
+    <div class="module-intro-grid">
+      <div class="module-ident">
+        <div class="module-number reveal-scale d-1">04</div>
+        <div class="code-chip reveal d-2" data-editable>
+          memory.<span class="fn">recall</span>(query, <span class="kw">depth</span>=<span class="str">"deep"</span>)
+        </div>
+        <div class="module-label reveal d-3">Unified Memory · PR #4420</div>
+      </div>
+      <div class="module-body">
+        <h2 class="reveal d-2" data-editable>
+          Short + Long + Entity, <span class="accent">collapsed into one API</span>.
+        </h2>
+        <p class="reveal d-3" style="font-size: var(--body-size); color: var(--ink-soft); line-height: 1.55;" data-editable>
+          Every write produces a <code>MemoryRecord</code> with content, scope, categories, importance, and embedding.
+          Recall ranks with a weighted composite of semantic similarity, recency decay, and importance.
+        </p>
+        <div class="pattern-cards">
+          <div class="pattern-card reveal d-4" data-editable>
+            <div class="name">memory.scope(path)</div>
+            <div class="desc">Bind to a sub-tree. Reads and writes are confined beneath that prefix.</div>
+          </div>
+          <div class="pattern-card reveal d-5" data-editable>
+            <div class="name">memory.slice([…])</div>
+            <div class="desc">Read-only union of scopes. Great for cross-tenant analytics.</div>
+          </div>
+          <div class="pattern-card reveal d-6" data-editable>
+            <div class="name">root_scope=</div>
+            <div class="desc">Construction-time prefix. Tenant isolation by construction.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <img class="logo reveal-fade d-6" src="crew_only_logo.png" alt="crewai" />
+</section>
+
+<!-- ================================================================
+     SLIDE 09 — MEMORY · SHALLOW vs DEEP
+     ================================================================ -->
+<section class="slide slide-compare">
+  <div class="slide-content">
+    <div class="top-bar reveal-fade d-1">
+      <span class="tag"><span class="num">04</span> Unified Memory</span>
+      <span class="slide-counter">09 / 12</span>
+    </div>
+    <div>
+      <h2 class="reveal d-2" data-editable>
+        Two recall paths, <span class="accent">same signature</span>.
+      </h2>
+      <p class="subhead reveal d-3" data-editable>
+        <code>memory.recall(query, depth=…)</code> — pick the cost profile that fits your path.
+      </p>
+    </div>
+    <div class="compare-grid">
+      <div class="compare-card reveal d-4" data-editable>
+        <div class="label">depth=&quot;shallow&quot;</div>
+        <div class="headline">Hot-path retrieval.</div>
+        <div class="body">
+          One embed, one vector search. Returns <code>MemoryMatch</code>es scored by the composite formula.
+          Deterministic, no LLM.
+        </div>
+        <ul class="steps">
+          <li>embed query</li>
+          <li>single backend search</li>
+          <li>composite rank</li>
+        </ul>
+      </div>
+      <div class="compare-card accent reveal d-5" data-editable>
+        <div class="label">depth=&quot;deep&quot; (default)</div>
+        <div class="headline">LLM-in-the-loop retriever.</div>
+        <div class="body">
+          Analyzes the query, generates sub-queries, searches scopes in parallel, routes on confidence,
+          optionally explores deeper to fill evidence gaps.
+        </div>
+        <ul class="steps">
+          <li>analyze → sub-queries</li>
+          <li>parallel scope search</li>
+          <li>confidence router</li>
+          <li>explore_deeper loop</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <img class="logo reveal-fade d-5" src="crew_only_logo.png" alt="crewai" />
+</section>
+
+<!-- ================================================================
+     SLIDE 10 — MODULE 05 · CHECKPOINTING
+     ================================================================ -->
+<section class="slide slide-module-intro">
+  <div class="slide-content">
+    <div class="top-bar reveal-fade d-1">
+      <span class="tag"><span class="num">05</span> Checkpointing</span>
+      <span class="slide-counter">10 / 12</span>
+    </div>
+    <div class="module-intro-grid">
+      <div class="module-ident">
+        <div class="module-number reveal-scale d-1">05</div>
+        <div class="code-chip reveal d-2" data-editable>
+          <span class="fn">Crew.fork</span>(cfg, <span class="kw">branch</span>=<span class="str">"experiment"</span>)
+        </div>
+        <div class="module-label reveal d-3">Checkpointing · v1.14.0–1.14.3</div>
+      </div>
+      <div class="module-body">
+        <h2 class="reveal d-2" data-editable>
+          Snapshot the runtime. <span class="accent">Rewind anywhere.</span>
+        </h2>
+        <ul class="bullets">
+          <li class="reveal d-3" data-editable>Works on <strong>Flow</strong>, <strong>Crew</strong>, and — new — <strong><code>Agent.kickoff()</code></strong>.</li>
+          <li class="reveal d-4" data-editable>~100 event types trigger a write. <strong>Signals too</strong> — Ctrl-C snapshots before exit.</li>
+          <li class="reveal d-5" data-editable><code>JsonProvider</code> for dev, <code>SqliteProvider</code> for scale. Same six-method contract.</li>
+          <li class="reveal d-6" data-editable>Every row carries <code>parent_id</code> + <code>branch</code> — full lineage trees for free.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <img class="logo reveal-fade d-6" src="crew_only_logo.png" alt="crewai" />
+</section>
+
+<!-- ================================================================
+     SLIDE 11 — CHECKPOINTING · RESUME + FORK
+     ================================================================ -->
+<section class="slide slide-code">
+  <div class="slide-content">
+    <div class="top-bar reveal-fade d-1">
+      <span class="tag"><span class="num">05</span> Checkpointing</span>
+      <span class="slide-counter">11 / 12</span>
+    </div>
+    <div class="code-layout">
+      <div class="text-col">
+        <h2 class="reveal d-2" data-editable>
+          Rewind. <span class="accent">Override.</span> Branch.
+        </h2>
+        <p class="subhead reveal d-3" data-editable>
+          Resume rehydrates state and continues. Fork adds a branch label and lets you override any input before the kickoff continues.
+        </p>
+      </div>
+      <div class="code-block reveal d-4" data-editable>
+<span class="cmt"># Resume — rehydrate + continue on the same branch</span>
+crew = <span class="fn">Crew.from_checkpoint</span>(cfg)
+crew.<span class="fn">kickoff</span>()
+
+<span class="cmt"># Fork — diverge on a new branch, override inputs</span>
+crew = <span class="fn">Crew.fork</span>(cfg, branch=<span class="str">"aggressive"</span>)
+crew.<span class="fn">kickoff</span>(inputs={<span class="str">"tone"</span>: <span class="str">"aggressive and irreverent"</span>})
+
+<span class="cmt"># Or from the CLI — no code required</span>
+<span class="kw">$</span> crewai checkpoint resume <span class="str">&lt;ID&gt;</span>
+      </div>
+    </div>
+    <div class="footnote reveal d-5" data-editable>
+      <span class="pill">gotcha</span> SqliteProvider wants the <code>&quot;db_path#id&quot;</code> form on <code>restore_from</code>.
+    </div>
+  </div>
+  <img class="logo reveal-fade d-5" src="crew_only_logo.png" alt="crewai" />
+</section>
+
+<!-- ================================================================
+     SLIDE 12 — CLOSING
+     ================================================================ -->
+<section class="slide slide-hero closing">
+  <div class="slide-content">
+    <div class="top-bar reveal-fade d-1">
+      <span class="tag">Ready?</span>
+      <span class="slide-counter">12 / 12</span>
+    </div>
+    <div class="hero">
+      <div class="eyebrow reveal d-2" data-editable>Clone · run · follow along</div>
+      <h1 class="reveal d-3" data-editable>
+        One repo. Six notebooks. <span class="accent">Start with Module 01.</span>
+      </h1>
+      <div class="cta reveal d-4" data-editable>
+        <code>git clone github.com/crewAIInc/crewai-april-feature-showcase</code>
+        <code>uv venv && source .venv/bin/activate && uv pip install -e .</code>
+        <code>jupyter notebook notebooks/00_build_with_ai.ipynb</code>
+      </div>
+    </div>
+    <div class="modules-rail reveal-fade d-5">
+      <span>01 Build with AI</span>
+      <span>02 Skills</span>
+      <span>03 Plan &amp; Execute</span>
+      <span>04 Memory</span>
+      <span>05 Checkpointing</span>
+    </div>
+  </div>
+  <img class="logo reveal-fade d-5" src="crew_only_logo.png" alt="crewai" />
+</section>
+
+<script>
+/* ================================================================
+   SLIDE PRESENTATION CONTROLLER
+   ================================================================ */
+class SlidePresentation {
+  constructor() {
+    this.slides = Array.from(document.querySelectorAll('.slide'));
+    this.progressBar = document.getElementById('progressBar');
+    this.navDotsEl = document.getElementById('navDots');
+    this.current = 0;
+
+    this.buildNavDots();
+    this.setupObserver();
+    this.setupKeyboard();
+    this.setupTouch();
+    this.setupScroll();
+  }
+
+  buildNavDots() {
+    this.slides.forEach((slide, i) => {
+      const dot = document.createElement('button');
+      dot.className = 'nav-dot';
+      dot.setAttribute('aria-label', `Go to slide ${i + 1}`);
+      dot.addEventListener('click', () => this.goTo(i));
+      this.navDotsEl.appendChild(dot);
+    });
+    this.dots = Array.from(this.navDotsEl.querySelectorAll('.nav-dot'));
+    this.dots[0].classList.add('active');
+  }
+
+  setupObserver() {
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+            const idx = this.slides.indexOf(entry.target);
+            if (idx >= 0) this.setCurrent(idx);
+          }
+        });
+      },
+      { threshold: 0.5 }
+    );
+    this.slides.forEach((s) => io.observe(s));
+  }
+
+  setupKeyboard() {
+    document.addEventListener('keydown', (e) => {
+      if (e.target.getAttribute('contenteditable') === 'true') return;
+      switch (e.key) {
+        case 'ArrowDown':
+        case 'ArrowRight':
+        case 'PageDown':
+        case ' ':
+          e.preventDefault();
+          this.goTo(this.current + 1);
+          break;
+        case 'ArrowUp':
+        case 'ArrowLeft':
+        case 'PageUp':
+          e.preventDefault();
+          this.goTo(this.current - 1);
+          break;
+        case 'Home':
+          e.preventDefault(); this.goTo(0); break;
+        case 'End':
+          e.preventDefault(); this.goTo(this.slides.length - 1); break;
+      }
+    });
+  }
+
+  setupTouch() {
+    let startY = null;
+    document.addEventListener('touchstart', (e) => { startY = e.touches[0].clientY; }, { passive: true });
+    document.addEventListener('touchend', (e) => {
+      if (startY === null) return;
+      const dy = e.changedTouches[0].clientY - startY;
+      if (Math.abs(dy) > 50) this.goTo(this.current + (dy < 0 ? 1 : -1));
+      startY = null;
+    });
+  }
+
+  setupScroll() {
+    const update = () => {
+      const total = document.body.scrollHeight - window.innerHeight;
+      const pct = total > 0 ? (window.scrollY / total) * 100 : 0;
+      this.progressBar.style.width = pct + '%';
+    };
+    update();
+    window.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update);
+  }
+
+  goTo(idx) {
+    const clamped = Math.max(0, Math.min(idx, this.slides.length - 1));
+    this.slides[clamped].scrollIntoView({ behavior: 'smooth' });
+  }
+
+  setCurrent(idx) {
+    if (idx === this.current) return;
+    this.current = idx;
+    this.dots.forEach((d, i) => d.classList.toggle('active', i === idx));
+  }
+}
+
+/* ================================================================
+   INLINE EDITOR
+   ================================================================ */
+class InlineEditor {
+  constructor() {
+    this.toggle = document.getElementById('editToggle');
+    this.hotzone = document.querySelector('.edit-hotzone');
+    this.saveIndicator = document.getElementById('saveIndicator');
+    this.storageKey = 'crewai-showcase-slides:edits';
+    this.isActive = false;
+    this.saveTimer = null;
+    this.hideTimeout = null;
+
+    this.editables = Array.from(document.querySelectorAll('[data-editable]'));
+    this.editables.forEach((el, i) => el.setAttribute('data-edit-key', 'edit-' + i));
+    this.restoreEdits();
+
+    this.wireToggle();
+    this.wireHotzone();
+    this.wireKeyboard();
+    this.wireSaveShortcut();
+  }
+
+  wireToggle() {
+    this.toggle.addEventListener('click', () => this.toggleEditMode());
+  }
+
+  wireHotzone() {
+    this.hotzone.addEventListener('mouseenter', () => {
+      clearTimeout(this.hideTimeout);
+      this.toggle.classList.add('show');
+    });
+    this.hotzone.addEventListener('mouseleave', () => {
+      this.hideTimeout = setTimeout(() => {
+        if (!this.isActive) this.toggle.classList.remove('show');
+      }, 400);
+    });
+    this.toggle.addEventListener('mouseenter', () => clearTimeout(this.hideTimeout));
+    this.toggle.addEventListener('mouseleave', () => {
+      this.hideTimeout = setTimeout(() => {
+        if (!this.isActive) this.toggle.classList.remove('show');
+      }, 400);
+    });
+    this.hotzone.addEventListener('click', () => this.toggleEditMode());
+  }
+
+  wireKeyboard() {
+    document.addEventListener('keydown', (e) => {
+      if ((e.key === 'e' || e.key === 'E') && !e.target.getAttribute('contenteditable')) {
+        if (e.metaKey || e.ctrlKey || e.altKey) return;
+        this.toggleEditMode();
+      }
+    });
+  }
+
+  wireSaveShortcut() {
+    document.addEventListener('keydown', (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+        e.preventDefault();
+        this.exportHtml();
+      }
+    });
+  }
+
+  toggleEditMode() {
+    this.isActive = !this.isActive;
+    document.body.classList.toggle('editing', this.isActive);
+    this.toggle.classList.toggle('active', this.isActive);
+
+    this.editables.forEach((el) => {
+      if (this.isActive) {
+        el.setAttribute('contenteditable', 'true');
+        el.addEventListener('input', this._onInput);
+        el.addEventListener('blur', this._onBlur);
+      } else {
+        el.removeAttribute('contenteditable');
+        el.removeEventListener('input', this._onInput);
+        el.removeEventListener('blur', this._onBlur);
+      }
+    });
+
+    if (!this.isActive) this.toggle.classList.remove('show');
+  }
+
+  _onInput = () => {
+    clearTimeout(this.saveTimer);
+    this.saveTimer = setTimeout(() => this.saveEdits(), 600);
+  };
+  _onBlur = () => { this.saveEdits(); };
+
+  saveEdits() {
+    const edits = {};
+    this.editables.forEach((el) => {
+      edits[el.getAttribute('data-edit-key')] = el.innerHTML;
+    });
+    try {
+      localStorage.setItem(this.storageKey, JSON.stringify(edits));
+      this.flashSaveIndicator();
+    } catch (err) { console.warn('Could not save edits:', err); }
+  }
+
+  restoreEdits() {
+    try {
+      const raw = localStorage.getItem(this.storageKey);
+      if (!raw) return;
+      const edits = JSON.parse(raw);
+      this.editables.forEach((el) => {
+        const key = el.getAttribute('data-edit-key');
+        if (edits[key] !== undefined) el.innerHTML = edits[key];
+      });
+    } catch (err) { console.warn('Could not restore edits:', err); }
+  }
+
+  flashSaveIndicator() {
+    this.saveIndicator.classList.add('visible');
+    clearTimeout(this._flashTimer);
+    this._flashTimer = setTimeout(() => {
+      this.saveIndicator.classList.remove('visible');
+    }, 900);
+  }
+
+  exportHtml() {
+    const doc = document.documentElement.outerHTML;
+    const blob = new Blob(['<!doctype html>\n' + doc], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'crewai-showcase-slides.edited.html';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+}
+
+/* Strip leading/trailing whitespace from code blocks so the inline
+   HTML newlines between <div> and its first/last child don't render
+   as blank lines under white-space: pre-wrap. */
+function trimCodeBlocks() {
+  document.querySelectorAll('.code-block').forEach((el) => {
+    el.innerHTML = el.innerHTML
+      .replace(/^[\s\n]+/, '')
+      .replace(/[\s\n]+$/, '');
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  trimCodeBlocks();
+  new SlidePresentation();
+  new InlineEditor();
+});
+</script>
+</body>
+</html>
