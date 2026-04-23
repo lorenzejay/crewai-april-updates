@@ -1,0 +1,50 @@
+name: Deploy slides to GitHub Pages
+
+# Rebuild Pages on every push to main. Manual re-run button too.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# GITHUB_TOKEN needs these to deploy via the official Pages action.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Only one Pages deploy in flight at a time. A newer push cancels an older,
+# still-running deploy — fixes the "Please cancel <id> first" collision.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      # Copy only the files Pages actually needs into a staging dir so we
+      # don't ship src/, notebooks/, skills/, pyproject.toml, etc. to the CDN.
+      - name: Stage site
+        run: |
+          mkdir -p _site
+          cp index.html _site/
+          cp crew_only_logo.png _site/
+          cp .nojekyll _site/ 2>/dev/null || touch _site/.nojekyll
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
