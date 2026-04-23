@@ -992,47 +992,6 @@ crewai deploy
 </section>
 
 <!-- ================================================================
-     SLIDE 07 — PLAN & EXECUTE · DAYTONA DEMO
-     ================================================================ -->
-<section class="slide slide-code">
-  <div class="slide-content">
-    <div class="top-bar reveal-fade d-1">
-      <span class="tag"><span class="num">03</span> Plan &amp; Execute</span>
-      <span class="slide-counter">07 / 12</span>
-    </div>
-    <div class="code-layout">
-      <div class="text-col">
-        <h2 class="reveal d-2" data-editable>
-          We built a todo app. <span class="accent">Watched it render.</span>
-        </h2>
-        <p class="subhead reveal d-3" data-editable>
-          A Flow provisions a Daytona sandbox. The planning agent writes
-          <code>index.html</code>, <code>style.css</code>, and <code>app.js</code> via
-          <code>DaytonaFileTool</code>. The Flow grabs a live preview URL.
-        </p>
-      </div>
-      <div class="code-block reveal d-4" data-editable>
-<span class="kw">from</span> crewai_tools <span class="kw">import</span> DaytonaFileTool, DaytonaExecTool
-
-builder = <span class="fn">Agent</span>(
-    role=<span class="str">"Frontend Engineer"</span>,
-    llm=<span class="fn">get_llm</span>(),
-    planning_config=<span class="fn">PlanningConfig</span>(reasoning_effort=<span class="str">"medium"</span>),
-    tools=[<span class="fn">DaytonaFileTool</span>(sandbox_id=sid), <span class="fn">DaytonaExecTool</span>(sandbox_id=sid)],
-)
-<span class="kw">await</span> builder.<span class="fn">kickoff</span>(<span class="str">"Build a todo-list app at /app. HTML, CSS, JS."</span>)
-
-link = sandbox.<span class="fn">get_preview_link</span>(<span class="num-lit">8000</span>)  <span class="cmt"># → URL you can open</span>
-      </div>
-    </div>
-    <div class="footnote reveal d-5" data-editable>
-      <span class="pill">demo</span> Notebook renders <code>link.url</code> in an IFrame + snapshots <code>index.html</code>.
-    </div>
-  </div>
-  <img class="logo reveal-fade d-5" src="crew_only_logo.png" alt="crewai" />
-</section>
-
-<!-- ================================================================
      SLIDE 08 — MODULE 04 · UNIFIED MEMORY
      ================================================================ -->
 <section class="slide slide-module-intro">
